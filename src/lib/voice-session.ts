@@ -1,0 +1,541 @@
+import {
+  SAMPLE_RATE,
+  base64Pcm16ToFloat32,
+  float32ToBase64Pcm16,
+  resampleLinear,
+  rmsLevel,
+} from "./audio";
+import type { TranscriptLine } from "./types";
+
+export type { TranscriptLine };
+
+export type SessionStatus =
+  | "idle"
+  | "connecting"
+  | "live"
+  | "ending"
+  | "ended"
+  | "error";
+
+export type VoiceSessionHandlers = {
+  onStatus?: (status: SessionStatus, detail?: string) => void;
+  onTranscript?: (lines: TranscriptLine[]) => void;
+  onLevel?: (level: number) => void;
+  onSpeaking?: (who: "user" | "assistant" | null) => void;
+  onError?: (message: string) => void;
+};
+
+type SessionTokenResponse = {
+  value?: string;
+  client_secret?: string | { value?: string };
+  error?: string;
+  voice?: string;
+  model?: string;
+  instructions?: string;
+  greeting?: string;
+  keyterms?: string[];
+};
+
+function extractToken(data: SessionTokenResponse): string | null {
+  if (typeof data.value === "string" && data.value) return data.value;
+  if (typeof data.client_secret === "string" && data.client_secret)
+    return data.client_secret;
+  if (
+    data.client_secret &&
+    typeof data.client_secret === "object" &&
+    typeof data.client_secret.value === "string"
+  ) {
+    return data.client_secret.value;
+  }
+  return null;
+}
+
+function uid(prefix: string) {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Browser client for xAI Grok Voice Agent.
+ * Mobile-safe: unlock AudioContext on user gesture before start().
+ */
+export class VoiceSession {
+  private ws: WebSocket | null = null;
+  private mediaStream: MediaStream | null = null;
+  private audioContext: AudioContext | null = null;
+  private workletNode: ScriptProcessorNode | null = null;
+  private sourceNode: MediaStreamAudioSourceNode | null = null;
+  private silentGain: GainNode | null = null;
+  private playbackTime = 0;
+  private transcript: TranscriptLine[] = [];
+  private assistantPartialId: string | null = null;
+  private userPartialId: string | null = null;
+  private closed = false;
+  private micMuted = false;
+  private activeSources: AudioBufferSourceNode[] = [];
+
+  constructor(private handlers: VoiceSessionHandlers = {}) {}
+
+  getTranscript() {
+    return [...this.transcript];
+  }
+
+  setMuted(muted: boolean) {
+    this.micMuted = muted;
+    this.mediaStream?.getAudioTracks().forEach((t) => {
+      t.enabled = !muted;
+    });
+  }
+
+  /** Call from a click/tap handler before start() for iOS / FB browser. */
+  async unlockAudio(): Promise<void> {
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!Ctx) return;
+    if (!this.audioContext || this.audioContext.state === "closed") {
+      this.audioContext = new Ctx();
+    }
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
+    // Play tiny silent buffer to unlock
+    try {
+      const buf = this.audioContext.createBuffer(1, 1, 22050);
+      const src = this.audioContext.createBufferSource();
+      src.buffer = buf;
+      src.connect(this.audioContext.destination);
+      src.start(0);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async start(interviewId: string) {
+    if (this.ws) return;
+    this.closed = false;
+    this.handlers.onStatus?.("connecting");
+
+    try {
+      await this.unlockAudio();
+
+      const [stream, tokenRes] = await Promise.all([
+        navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+        }),
+        fetch("/api/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ interviewId }),
+        }),
+      ]);
+
+      this.mediaStream = stream;
+
+      if (!tokenRes.ok) {
+        const err = await tokenRes.json().catch(() => ({}));
+        throw new Error(
+          err.error || `Failed to create session (${tokenRes.status})`,
+        );
+      }
+
+      const tokenJson = (await tokenRes.json()) as SessionTokenResponse;
+      const token = extractToken(tokenJson);
+      if (!token) throw new Error("No ephemeral token returned from server");
+
+      const model = tokenJson.model || "grok-voice-latest";
+      const url = `wss://api.x.ai/v1/realtime?model=${encodeURIComponent(model)}`;
+
+      const ws = new WebSocket(url, [`xai-client-secret.${token}`]);
+      this.ws = ws;
+
+      ws.onopen = async () => {
+        const instructions =
+          tokenJson.instructions || "You are a helpful interview assistant.";
+        const voice = tokenJson.voice || "eve";
+        const keyterms = tokenJson.keyterms || [
+          "Hearthline",
+          "AI Front Desk",
+        ];
+
+        ws.send(
+          JSON.stringify({
+            type: "session.update",
+            session: {
+              voice,
+              instructions,
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.85,
+                silence_duration_ms: 800,
+                prefix_padding_ms: 300,
+              },
+              audio: {
+                input: {
+                  format: { type: "audio/pcm", rate: SAMPLE_RATE },
+                  transcription: {
+                    model: "grok-transcribe",
+                    language_hint: "en",
+                    keyterms,
+                  },
+                },
+                output: { format: { type: "audio/pcm", rate: SAMPLE_RATE } },
+              },
+            },
+          }),
+        );
+
+        const greet =
+          tokenJson.greeting ||
+          "Welcome to your sales closer interview. I'm Jordan.";
+
+        ws.send(
+          JSON.stringify({
+            type: "conversation.item.create",
+            item: {
+              type: "force_message",
+              role: "assistant",
+              interruptible: true,
+              content: [{ type: "output_text", text: greet }],
+            },
+          }),
+        );
+
+        setTimeout(() => {
+          if (this.closed || ws.readyState !== WebSocket.OPEN) return;
+          ws.send(
+            JSON.stringify({
+              type: "response.create",
+              response: {
+                instructions:
+                  "Continue the interview naturally after the greeting. Set expectations for a ~12–15 minute interview with a role-play, then ask for a 45-second intro. Do not re-ask for name, email, or phone.",
+              },
+            }),
+          );
+        }, 500);
+
+        await this.startMicCapture();
+        this.handlers.onStatus?.("live");
+        this.pushSystem("Connected — speak naturally when Jordan finishes.");
+      };
+
+      ws.onmessage = (ev) => this.handleServerEvent(ev.data);
+      ws.onerror = () => {
+        this.handlers.onError?.(
+          "Connection error. Try again on Wi‑Fi, or open in Chrome/Safari.",
+        );
+        this.handlers.onStatus?.("error", "WebSocket error");
+      };
+      ws.onclose = () => {
+        if (!this.closed) this.handlers.onStatus?.("ended");
+        this.cleanupMedia(false);
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to start session";
+      const friendly =
+        /Permission|NotAllowed|getUserMedia/i.test(msg)
+          ? "Microphone permission blocked. Allow mic access and try again."
+          : msg;
+      this.handlers.onError?.(friendly);
+      this.handlers.onStatus?.("error", friendly);
+      this.cleanupMedia(true);
+      throw e;
+    }
+  }
+
+  async stop() {
+    this.closed = true;
+    this.handlers.onStatus?.("ending");
+    try {
+      this.ws?.close();
+    } catch {
+      /* ignore */
+    }
+    this.ws = null;
+    this.stopPlayback();
+    this.cleanupMedia(true);
+    this.handlers.onStatus?.("ended");
+    this.handlers.onSpeaking?.(null);
+  }
+
+  private cleanupMedia(stopTracks: boolean) {
+    try {
+      this.workletNode?.disconnect();
+      this.sourceNode?.disconnect();
+      this.silentGain?.disconnect();
+    } catch {
+      /* ignore */
+    }
+    this.workletNode = null;
+    this.sourceNode = null;
+    this.silentGain = null;
+    if (stopTracks) {
+      this.mediaStream?.getTracks().forEach((t) => t.stop());
+      this.mediaStream = null;
+      if (this.audioContext && this.audioContext.state !== "closed") {
+        void this.audioContext.close();
+      }
+      this.audioContext = null;
+    }
+  }
+
+  private stopPlayback() {
+    for (const s of this.activeSources) {
+      try {
+        s.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+    this.activeSources = [];
+    this.playbackTime = 0;
+  }
+
+  private async startMicCapture() {
+    if (!this.mediaStream) return;
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!this.audioContext || this.audioContext.state === "closed") {
+      this.audioContext = new Ctx();
+    }
+    const ctx = this.audioContext;
+    if (ctx.state === "suspended") await ctx.resume();
+
+    const source = ctx.createMediaStreamSource(this.mediaStream);
+    this.sourceNode = source;
+
+    const bufferSize = 4096;
+    const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
+    this.workletNode = processor;
+
+    processor.onaudioprocess = (e) => {
+      if (this.closed || this.micMuted || !this.ws || this.ws.readyState !== 1)
+        return;
+      const input = e.inputBuffer.getChannelData(0);
+      this.handlers.onLevel?.(rmsLevel(input));
+      const resampled = resampleLinear(input, ctx.sampleRate, SAMPLE_RATE);
+      const b64 = float32ToBase64Pcm16(resampled);
+      this.ws.send(
+        JSON.stringify({ type: "input_audio_buffer.append", audio: b64 }),
+      );
+    };
+
+    source.connect(processor);
+    const silent = ctx.createGain();
+    silent.gain.value = 0;
+    this.silentGain = silent;
+    processor.connect(silent);
+    silent.connect(ctx.destination);
+  }
+
+  private playPcmBase64(b64: string) {
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!this.audioContext || this.audioContext.state === "closed") {
+      this.audioContext = new Ctx({ sampleRate: SAMPLE_RATE });
+    }
+    const ctx = this.audioContext;
+    if (ctx.state === "suspended") void ctx.resume();
+
+    const samples = base64Pcm16ToFloat32(b64);
+    if (samples.length === 0) return;
+
+    const forCtx =
+      ctx.sampleRate === SAMPLE_RATE
+        ? samples
+        : resampleLinear(samples, SAMPLE_RATE, ctx.sampleRate);
+
+    const buffer = ctx.createBuffer(1, forCtx.length, ctx.sampleRate);
+    const channel = new Float32Array(forCtx.length);
+    channel.set(forCtx);
+    buffer.copyToChannel(channel, 0);
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    if (this.playbackTime < now) this.playbackTime = now + 0.02;
+    src.start(this.playbackTime);
+    this.playbackTime += buffer.duration;
+    this.activeSources.push(src);
+    src.onended = () => {
+      this.activeSources = this.activeSources.filter((s) => s !== src);
+    };
+    this.handlers.onSpeaking?.("assistant");
+  }
+
+  private pushLine(line: TranscriptLine) {
+    this.transcript = [...this.transcript, line];
+    this.handlers.onTranscript?.(this.getTranscript());
+  }
+
+  private updateLine(id: string, text: string, partial?: boolean) {
+    this.transcript = this.transcript.map((l) =>
+      l.id === id ? { ...l, text, partial } : l,
+    );
+    this.handlers.onTranscript?.(this.getTranscript());
+  }
+
+  private pushSystem(text: string) {
+    this.pushLine({
+      id: uid("sys"),
+      role: "system",
+      text,
+      at: Date.now(),
+    });
+  }
+
+  private handleServerEvent(raw: string | Blob) {
+    if (typeof raw !== "string") return;
+    let event: Record<string, unknown>;
+    try {
+      event = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    const type = String(event.type || "");
+
+    switch (type) {
+      case "input_audio_buffer.speech_started":
+        this.handlers.onSpeaking?.("user");
+        this.stopPlayback();
+        break;
+
+      case "input_audio_buffer.speech_stopped":
+        this.handlers.onSpeaking?.(null);
+        break;
+
+      case "response.output_audio.delta":
+      case "response.audio.delta": {
+        const delta = (event.delta as string) || (event.audio as string);
+        if (delta) this.playPcmBase64(delta);
+        break;
+      }
+
+      case "response.output_audio_transcript.delta":
+      case "response.audio_transcript.delta": {
+        const delta = String(event.delta || "");
+        if (!delta) break;
+        if (!this.assistantPartialId) {
+          this.assistantPartialId = uid("a");
+          this.pushLine({
+            id: this.assistantPartialId,
+            role: "assistant",
+            text: delta,
+            partial: true,
+            at: Date.now(),
+          });
+        } else {
+          const existing = this.transcript.find(
+            (l) => l.id === this.assistantPartialId,
+          );
+          this.updateLine(
+            this.assistantPartialId,
+            (existing?.text || "") + delta,
+            true,
+          );
+        }
+        break;
+      }
+
+      case "response.output_audio_transcript.done":
+      case "response.audio_transcript.done": {
+        const text = String(event.transcript || "");
+        if (this.assistantPartialId) {
+          this.updateLine(
+            this.assistantPartialId,
+            text ||
+              this.transcript.find((l) => l.id === this.assistantPartialId)
+                ?.text ||
+              "",
+            false,
+          );
+        } else if (text) {
+          this.pushLine({
+            id: uid("a"),
+            role: "assistant",
+            text,
+            at: Date.now(),
+          });
+        }
+        this.assistantPartialId = null;
+        break;
+      }
+
+      case "conversation.item.input_audio_transcription.completed":
+      case "conversation.item.input_audio_transcription.done": {
+        const text = String(event.transcript || "");
+        if (text) {
+          if (this.userPartialId) {
+            this.updateLine(this.userPartialId, text, false);
+          } else {
+            this.pushLine({
+              id: uid("u"),
+              role: "user",
+              text,
+              at: Date.now(),
+            });
+          }
+        }
+        this.userPartialId = null;
+        break;
+      }
+
+      case "conversation.item.input_audio_transcription.updated":
+      case "conversation.item.input_audio_transcription.delta": {
+        const text = String(
+          (event.transcript as string) || (event.delta as string) || "",
+        );
+        if (!text) break;
+        if (!this.userPartialId) {
+          this.userPartialId = uid("u");
+          this.pushLine({
+            id: this.userPartialId,
+            role: "user",
+            text,
+            partial: true,
+            at: Date.now(),
+          });
+        } else if (type.endsWith("updated")) {
+          this.updateLine(this.userPartialId, text, true);
+        } else {
+          const existing = this.transcript.find(
+            (l) => l.id === this.userPartialId,
+          );
+          this.updateLine(
+            this.userPartialId,
+            (existing?.text || "") + text,
+            true,
+          );
+        }
+        break;
+      }
+
+      case "response.done":
+        this.handlers.onSpeaking?.(null);
+        break;
+
+      case "error": {
+        const err = event.error as { message?: string } | undefined;
+        const message =
+          err?.message || (event.message as string) || "Voice API error";
+        this.handlers.onError?.(message);
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+}

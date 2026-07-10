@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Front Desk · Sales Closer Hiring OS
 
-## Getting Started
+End-to-end **mobile-first** hiring pipeline for industry sales closers:
 
-First, run the development server:
+**Apply → AI screen (+ multitask) → Hiring manager → Digital offer → Onboarding voice → Setup checklist → Training → Production ready**
+
+Powered by **Grok Voice**. Designed like **Hearthline / Claude** (cream paper + terracotta).
+
+## Quick start
+
+```bash
+cd ~/ai-frontdesk-interviewer
+cp .env.local.example .env.local   # add XAI_API_KEY
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Pipeline stages
+
+| Stage | Agent | Outcome |
+|-------|--------|---------|
+| Screening | Jordan | Pass → HM · Maybe → waitlist · Fail → reject |
+| Multitask | UI pop-ups | Scores into card; weak scores demote pass |
+| Hiring manager | Morgan | Pass → **offer** · Maybe → admin review · Fail → reject |
+| Offer | `/offer/[token]` | Accept → onboarding unlocked |
+| Onboarding | Riley | Setup checklist |
+| Setup | Portal tasks | Slack, CRM, dialer, handbook |
+| Train | Modules + quiz + Coach pitch | Auto `production_ready` when all pass |
+| Admin | `/admin` | Kanban + force actions |
+
+## Candidate URLs
+
+- `/` — role grid (10 verticals)
+- `/apply/[slug]` — form
+- `/interview/[id]` — live voice
+- `/done/[id]` — score + next CTA
+- `/offer/[token]` — accept/decline
+- `/portal/[id]?t=…` — home base
+- `/train/[id]?t=…` — academy
+
+## Ops
+
+- `/admin` — `ADMIN_SECRET`
+- Slack webhook on every stage complete
+- Email: Resend or Gmail SMTP
+
+See `docs/ARCHITECTURE.md` and `docs/RUNBOOK.md`.
+
+## Deploy (Vercel)
+
+1. Push repo to GitHub  
+2. Import project in Vercel  
+3. Set env vars from `.env.local.example`  
+4. Deploy  
+
+**Note:** Local data is `data/interviews.json` (gitignored). For multi-instance production, migrate store to Postgres.
+
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm run start
+npm run lint
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

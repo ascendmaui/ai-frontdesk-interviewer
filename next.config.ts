@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const root = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Avoid picking parent ~/package-lock.json as workspace root
+  turbopack: {
+    root,
+  },
 };
 
 export default nextConfig;
