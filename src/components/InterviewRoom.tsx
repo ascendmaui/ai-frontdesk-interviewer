@@ -269,11 +269,11 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     }
     return {
       title: "Ready when you are",
-      body: `${meta?.roleTitle || "Sales Closer"} · ~12–15 min with ${agentName}. While you talk, Yes/No boxes will pop up — answer them without stopping the conversation.`,
+      body: `${meta?.roleTitle || "Sales Closer"} · ~12–15 min with ${agentName}. While you talk, Yes/No boxes may pop up — answer them without stopping the conversation.`,
       bullets: [
         "Speak naturally — multitask pop-ups test real closer load",
         "Includes industry role-play",
-        "Results + next steps by email",
+        "After you finish, our team reviews and will contact you",
       ],
     };
   }, [agentName, meta?.kind, meta?.roleTitle]);

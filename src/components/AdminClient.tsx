@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { REC_EMOJI, REC_LABEL, type Recommendation } from "@/lib/company";
 
 type Row = {
@@ -20,33 +20,93 @@ type Row = {
     recommendation?: string;
     summary?: string;
   };
-  multitaskQuiz?: { multitaskScore?: number };
-  offer?: { token?: string; status?: string };
-  hmInterviewId?: string;
-  onboardingInterviewId?: string;
-  portalToken?: string;
-  notifications?: {
-    slack?: { ok?: boolean };
-    emailCandidate?: { ok?: boolean };
+  multitaskQuiz?: {
+    multitaskScore?: number;
+    correctCount?: number;
+    scoredCount?: number;
   };
+  portalToken?: string;
 };
 
-const COLUMNS = [
-  "applied",
-  "screening_in_progress",
-  "hm_invited",
-  "hm_in_progress",
-  "hm_maybe",
-  "offer_pending",
-  "onboarding_invited",
-  "setup_in_progress",
-  "training_in_progress",
-  "production_ready",
-  "waitlisted",
-  "rejected",
-  "hm_rejected",
-  "offer_declined",
-];
+type SessionDetail = {
+  id: string;
+  kind: string;
+  status: string;
+  durationSec?: number;
+  createdAt: string;
+  completedAt?: string;
+  scorecard?: {
+    overallScore?: number;
+    recommendation?: string;
+    summary?: string;
+    strengths?: string[];
+    developmentAreas?: string[];
+    scores?: Record<string, number>;
+    rolePlayNotes?: string;
+    nextStep?: string;
+  };
+  multitaskQuiz?: {
+    multitaskScore?: number;
+    correctCount?: number;
+    scoredCount?: number;
+    accuracy?: number;
+    skippedCount?: number;
+    avgResponseMs?: number;
+    answers?: {
+      questionId: string;
+      answer: boolean | null;
+      correct: boolean | null;
+      responseMs: number;
+      timedOut?: boolean;
+    }[];
+  };
+  transcript: {
+    id: string;
+    role: string;
+    text: string;
+    at: number;
+  }[];
+};
+
+type Detail = {
+  application: {
+    id: string;
+    roleTitle?: string;
+    roleEmoji?: string;
+    industry?: string;
+    roleSlug: string;
+    pipelineStatus: string;
+    createdAt: string;
+    candidate: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      yearsInSales?: string;
+      industryExperience?: string;
+      linkedin?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    };
+    scorecard?: SessionDetail["scorecard"];
+    multitaskQuiz?: SessionDetail["multitaskQuiz"];
+    offer?: { token?: string; status?: string };
+  };
+  sessions: SessionDetail[];
+  media?: { audioRecording: null; note: string };
+};
+
+function authHeaders(secret: string) {
+  return { Authorization: `Bearer ${secret}` };
+}
+
+function mmss(sec?: number) {
+  if (sec == null) return "—";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}m ${s}s`;
+}
 
 export function AdminClient() {
   const [secret, setSecret] = useState("");
@@ -54,17 +114,23 @@ export function AdminClient() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [filter, setFilter] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/admin/interviews", {
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: authHeaders(secret),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unauthorized");
       setRows(data.interviews || []);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("af_admin_secret", secret);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -72,12 +138,35 @@ export function AdminClient() {
     }
   }, [secret]);
 
+  useEffect(() => {
+    const s = sessionStorage.getItem("af_admin_secret");
+    if (s) setSecret(s);
+  }, []);
+
+  async function openDetail(id: string) {
+    setDetailLoading(true);
+    setDetail(null);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/interviews/${id}`, {
+        headers: authHeaders(secret),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load");
+      setDetail(data);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
   async function action(id: string, actionName: string) {
     setMsg(null);
     const res = await fetch("/api/admin/action", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${secret}`,
+        ...authHeaders(secret),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ id, action: actionName }),
@@ -89,22 +178,160 @@ export function AdminClient() {
     }
     setMsg(`OK: ${actionName}`);
     void load();
+    if (detail?.application.id === id) void openDetail(id);
   }
 
-  const byCol = (status: string) =>
-    rows.filter(
-      (r) =>
-        (r.pipelineStatus || r.status) === status ||
-        (!r.pipelineStatus && status === "applied" && r.status === "applied"),
+  const filtered = rows.filter((r) => {
+    if (!filter.trim()) return true;
+    const q = filter.toLowerCase();
+    return (
+      r.candidate.firstName.toLowerCase().includes(q) ||
+      r.candidate.lastName.toLowerCase().includes(q) ||
+      r.candidate.email.toLowerCase().includes(q) ||
+      r.roleSlug.toLowerCase().includes(q) ||
+      (r.pipelineStatus || "").toLowerCase().includes(q)
     );
+  });
+
+  // Detail view
+  if (detail) {
+    const app = detail.application;
+    const rec = (app.scorecard?.recommendation || "maybe") as Recommendation;
+    return (
+      <div className="animate-rise space-y-5">
+        <button
+          type="button"
+          onClick={() => setDetail(null)}
+          className="text-sm font-medium text-[var(--accent)]"
+        >
+          ← Back to list
+        </button>
+
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="hl-eyebrow">Review</p>
+            <h1 className="hl-serif text-[1.85rem] text-[var(--ink)]">
+              {app.roleEmoji} {app.candidate.firstName}{" "}
+              {app.candidate.lastName}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">
+              {app.roleTitle} · {app.pipelineStatus?.replace(/_/g, " ")}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="hl-serif text-3xl text-[var(--ink)]">
+              {app.scorecard?.overallScore ?? "—"}
+              <span className="text-base text-[var(--ink-faint)]">/10</span>
+            </p>
+            <p className="text-sm font-medium text-[var(--accent)]">
+              {REC_EMOJI[rec]} {REC_LABEL[rec] || rec}
+            </p>
+          </div>
+        </div>
+
+        {/* Contact card */}
+        <div className="hl-card-solid grid gap-2 p-4 text-sm sm:grid-cols-2">
+          <p>
+            <span className="text-[var(--ink-faint)]">Email</span>
+            <br />
+            <a
+              className="font-medium text-[var(--accent)]"
+              href={`mailto:${app.candidate.email}`}
+            >
+              {app.candidate.email}
+            </a>
+          </p>
+          <p>
+            <span className="text-[var(--ink-faint)]">Phone</span>
+            <br />
+            <a
+              className="font-medium text-[var(--ink)]"
+              href={`tel:${app.candidate.phone}`}
+            >
+              {app.candidate.phone}
+            </a>
+          </p>
+          <p>
+            <span className="text-[var(--ink-faint)]">Sales experience</span>
+            <br />
+            {app.candidate.yearsInSales || "—"} · industry:{" "}
+            {app.candidate.industryExperience || "—"}
+          </p>
+          <p>
+            <span className="text-[var(--ink-faint)]">UTM</span>
+            <br />
+            {[app.candidate.utmSource, app.candidate.utmMedium, app.candidate.utmCampaign]
+              .filter(Boolean)
+              .join(" / ") || "—"}
+          </p>
+          {app.candidate.linkedin && (
+            <p className="sm:col-span-2">
+              <span className="text-[var(--ink-faint)]">LinkedIn</span>
+              <br />
+              <a
+                href={app.candidate.linkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[var(--accent)]"
+              >
+                {app.candidate.linkedin}
+              </a>
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["send_offer", "Send offer"],
+              ["force_hm", "Invite to HM"],
+              ["force_onboarding", "Start onboarding"],
+              ["production_ready", "Mark ready"],
+              ["reject", "Reject"],
+            ] as const
+          ).map(([act, label]) => (
+            <button
+              key={act}
+              type="button"
+              onClick={() => void action(app.id, act)}
+              className={`rounded-full border px-3 py-2 text-xs font-semibold ${
+                act === "reject"
+                  ? "border-[var(--danger-border)] text-[var(--danger)]"
+                  : "border-[var(--line-strong)] text-[var(--ink-soft)]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {msg && <p className="text-sm text-[var(--success)]">{msg}</p>}
+
+        {detail.media?.note && (
+          <p className="rounded-xl border border-[var(--line)] bg-white/50 px-3 py-2 text-[12px] text-[var(--ink-faint)]">
+            {detail.media.note}
+          </p>
+        )}
+
+        {/* Sessions */}
+        {detail.sessions.map((session) => (
+          <SessionReview key={session.id} session={session} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 animate-rise">
       <p className="hl-eyebrow">Internal</p>
-      <h1 className="hl-serif text-[2rem] text-[var(--ink)]">Hiring OS</h1>
+      <h1 className="hl-serif text-[2rem] text-[var(--ink)]">
+        Interview review
+      </h1>
       <p className="text-sm text-[var(--ink-muted)]">
-        Pipeline kanban · force advance · offer · production ready
+        Scores, multitask results, and full transcripts. Candidates never see
+        this data.
       </p>
+
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="password"
@@ -119,100 +346,221 @@ export function AdminClient() {
           disabled={loading || !secret}
           className="hl-btn-primary sm:min-w-[120px]"
         >
-          {loading ? "Loading…" : "Load"}
+          {loading ? "Loading…" : "Load interviews"}
         </button>
       </div>
+
+      {rows.length > 0 && (
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Search name, email, role…"
+          className="hl-input mt-0"
+        />
+      )}
+
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
       {msg && <p className="text-sm text-[var(--success)]">{msg}</p>}
+      {detailLoading && (
+        <p className="text-sm text-[var(--ink-faint)]">Loading review…</p>
+      )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {COLUMNS.map((col) => {
-          const items = byCol(col);
-          if (!items.length && rows.length) return null;
+      <div className="space-y-2">
+        {filtered.map((r) => {
+          const rec = (r.scorecard?.recommendation ||
+            "maybe") as Recommendation;
           return (
-            <div key={col} className="hl-card-solid p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
-                {col.replace(/_/g, " ")} ({items.length})
-              </p>
-              <div className="mt-2 space-y-2">
-                {items.map((r) => {
-                  const rec = (r.scorecard?.recommendation ||
-                    "maybe") as Recommendation;
-                  return (
-                    <div
-                      key={r.id}
-                      className="rounded-xl border border-[var(--line)] bg-white/70 p-3 text-xs"
-                    >
-                      <p className="font-semibold text-[var(--ink)]">
-                        {REC_EMOJI[rec] || "·"} {r.candidate.firstName}{" "}
-                        {r.candidate.lastName}
-                      </p>
-                      <p className="text-[var(--ink-muted)]">
-                        {r.roleSlug} · {r.scorecard?.overallScore ?? "—"}/10
-                        {r.multitaskQuiz?.multitaskScore != null
-                          ? ` · mt ${r.multitaskQuiz.multitaskScore}`
-                          : ""}
-                      </p>
-                      <p className="truncate text-[var(--ink-faint)]">
-                        {r.candidate.email}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        <button
-                          type="button"
-                          className="rounded-full border border-[var(--line)] px-2 py-1"
-                          onClick={() => void action(r.id, "send_offer")}
-                        >
-                          Offer
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full border border-[var(--line)] px-2 py-1"
-                          onClick={() => void action(r.id, "force_hm")}
-                        >
-                          Force HM
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full border border-[var(--line)] px-2 py-1"
-                          onClick={() => void action(r.id, "force_onboarding")}
-                        >
-                          Onboard
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full border border-[var(--line)] px-2 py-1"
-                          onClick={() => void action(r.id, "production_ready")}
-                        >
-                          Ready
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full border border-[var(--danger-border)] px-2 py-1 text-[var(--danger)]"
-                          onClick={() => void action(r.id, "reject")}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                      {r.portalToken && (
-                        <a
-                          className="mt-1 inline-block text-[var(--accent)]"
-                          href={`/portal/${r.id}?t=${r.portalToken}`}
-                        >
-                          Portal →
-                        </a>
-                      )}
-                    </div>
-                  );
-                })}
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => void openDetail(r.id)}
+              className="hl-card-solid flex w-full flex-col gap-1 p-4 text-left transition hover:border-[var(--accent-border)] sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="font-semibold text-[var(--ink)]">
+                  {REC_EMOJI[rec] || "·"} {r.candidate.firstName}{" "}
+                  {r.candidate.lastName}
+                </p>
+                <p className="truncate text-sm text-[var(--ink-muted)]">
+                  {r.roleSlug} · {r.candidate.email} · {r.candidate.phone}
+                </p>
+                <p className="text-[11px] text-[var(--ink-faint)]">
+                  {(r.pipelineStatus || r.status).replace(/_/g, " ")} ·{" "}
+                  {new Date(r.createdAt).toLocaleString()}
+                </p>
               </div>
-            </div>
+              <div className="shrink-0 text-left sm:text-right">
+                <p className="hl-serif text-2xl text-[var(--ink)]">
+                  {r.scorecard?.overallScore ?? "—"}
+                  <span className="text-sm text-[var(--ink-faint)]">/10</span>
+                </p>
+                <p className="text-xs font-medium text-[var(--accent)]">
+                  {REC_LABEL[rec] || rec}
+                </p>
+                {r.multitaskQuiz?.multitaskScore != null && (
+                  <p className="text-[11px] text-[var(--ink-faint)]">
+                    Multitask {r.multitaskQuiz.multitaskScore}/10
+                    {r.multitaskQuiz.scoredCount
+                      ? ` · ${r.multitaskQuiz.correctCount}/${r.multitaskQuiz.scoredCount}`
+                      : ""}
+                  </p>
+                )}
+                <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">
+                  Open review →
+                </p>
+              </div>
+            </button>
           );
         })}
       </div>
 
       {!loading && rows.length === 0 && (
-        <p className="text-sm text-[var(--ink-faint)]">No applications yet.</p>
+        <p className="text-sm text-[var(--ink-faint)]">
+          Load with your admin secret to see interviews.
+        </p>
       )}
     </div>
+  );
+}
+
+function SessionReview({ session }: { session: SessionDetail }) {
+  const rec = (session.scorecard?.recommendation || "") as Recommendation | "";
+  const lines = (session.transcript || []).filter(
+    (t) => t.role === "user" || t.role === "assistant",
+  );
+
+  return (
+    <section className="hl-card space-y-4 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+            {session.kind.replace(/_/g, " ")}
+          </p>
+          <p className="text-sm text-[var(--ink-muted)]">
+            {mmss(session.durationSec)} · {session.status}
+            {session.completedAt
+              ? ` · ${new Date(session.completedAt).toLocaleString()}`
+              : ""}
+          </p>
+        </div>
+        {session.scorecard?.overallScore != null && (
+          <div className="text-right">
+            <p className="hl-serif text-2xl">
+              {session.scorecard.overallScore}
+              <span className="text-sm text-[var(--ink-faint)]">/10</span>
+            </p>
+            {rec && (
+              <p className="text-xs text-[var(--accent)]">
+                {REC_LABEL[rec as Recommendation] || rec}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {session.scorecard?.summary && (
+        <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
+          {session.scorecard.summary}
+        </p>
+      )}
+
+      {session.scorecard?.scores && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {Object.entries(session.scorecard.scores).map(([k, v]) => (
+            <div
+              key={k}
+              className="flex justify-between rounded-lg border border-[var(--line)] bg-white/60 px-2 py-1.5 text-xs"
+            >
+              <span className="capitalize text-[var(--ink-faint)]">
+                {k.replace(/([A-Z])/g, " $1")}
+              </span>
+              <span className="font-semibold">{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!!session.scorecard?.strengths?.length && (
+        <div>
+          <p className="text-[11px] font-semibold uppercase text-[var(--ink-faint)]">
+            Strengths
+          </p>
+          <ul className="mt-1 space-y-1 text-sm text-[var(--success)]">
+            {session.scorecard.strengths.map((s) => (
+              <li key={s}>· {s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!!session.scorecard?.developmentAreas?.length && (
+        <div>
+          <p className="text-[11px] font-semibold uppercase text-[var(--ink-faint)]">
+            Development
+          </p>
+          <ul className="mt-1 space-y-1 text-sm text-[var(--accent)]">
+            {session.scorecard.developmentAreas.map((s) => (
+              <li key={s}>· {s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {session.multitaskQuiz && (session.multitaskQuiz.scoredCount || 0) > 0 && (
+        <div className="rounded-xl border border-[var(--line)] bg-white/50 p-3 text-sm">
+          <p className="font-semibold text-[var(--ink)]">Multitask pop-ups</p>
+          <p className="text-[var(--ink-muted)]">
+            {session.multitaskQuiz.correctCount}/
+            {session.multitaskQuiz.scoredCount} correct · score{" "}
+            {session.multitaskQuiz.multitaskScore}/10
+            {session.multitaskQuiz.skippedCount
+              ? ` · ${session.multitaskQuiz.skippedCount} timed out`
+              : ""}
+            {session.multitaskQuiz.avgResponseMs
+              ? ` · avg ${Math.round(session.multitaskQuiz.avgResponseMs / 1000)}s`
+              : ""}
+          </p>
+        </div>
+      )}
+
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
+          Transcript ({lines.length} turns)
+        </p>
+        {lines.length === 0 ? (
+          <p className="text-sm text-[var(--ink-faint)]">
+            No transcript captured for this session.
+          </p>
+        ) : (
+          <div className="max-h-[420px] space-y-2 overflow-y-auto rounded-xl border border-[var(--line)] bg-[#fffdf7] p-3">
+            {lines.map((line) => {
+              const isUser = line.role === "user";
+              return (
+                <div
+                  key={line.id}
+                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[92%] rounded-2xl px-3 py-2 text-[13.5px] leading-relaxed ${
+                      isUser
+                        ? "rounded-br-md border border-[var(--accent-border)] bg-[var(--accent-wash)]"
+                        : "rounded-bl-md border border-[var(--line)] bg-white"
+                    }`}
+                  >
+                    <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
+                      {isUser ? "Candidate" : "Agent"}
+                      {line.at
+                        ? ` · ${new Date(line.at).toLocaleTimeString()}`
+                        : ""}
+                    </p>
+                    {line.text}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

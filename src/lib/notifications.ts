@@ -123,61 +123,25 @@ function candidateEmailContent(
   const slackInvite = process.env.ONBOARDING_SLACK_INVITE_URL || "";
   const handbook = process.env.ONBOARDING_HANDBOOK_URL || "";
 
-  // ─── Screening ───
+  // ─── Screening: never reveal scores or decisions — team reviews first ───
   if (kind === "screening") {
-    if (isQualified(recommendation) && nextSession) {
-      const subject = `You're advancing — hiring manager interview for ${roleTitle}`;
-      const text = `Hi ${first},
-
-Great work on the ${roleTitle} screening at ${brand}.${score != null ? ` Score: ${score}/10.` : ""}
-
-Next step: a short voice interview with Morgan (hiring manager).
-${nextUrl}
-
-Tip: find a quiet spot — same setup as before.
-
-— ${COMPANY.brand} Hiring
-`;
-      const html = emailShell(`
-        <p style="margin:0 0 10px;color:#BA5B33;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase">Screening passed</p>
-        <h1 style="margin:0 0 14px;font-size:26px;font-weight:400;color:#231D15;font-family:Georgia,serif">You're advancing, ${escapeHtml(first)}</h1>
-        <p style="color:#6E6455;line-height:1.6">You passed the voice screening for <strong style="color:#231D15">${escapeHtml(roleTitle)}</strong>.${score != null ? ` Overall: <strong style="color:#BA5B33">${score}/10</strong>.` : ""}</p>
-        <p style="color:#6E6455;line-height:1.6">Next is a live conversation with <strong>Morgan</strong>, our hiring manager.</p>
-        ${ctaButton(nextUrl, "Start hiring manager interview")}
-        <p style="color:#93876F;font-size:14px">~10–12 minutes · mobile friendly</p>
-      `);
-      return { subject, text, html };
-    }
-
-    if (recommendation === "maybe" || interview.pipelineStatus === "waitlisted") {
-      const subject = `Thanks for interviewing — ${brand}`;
-      const text = `Hi ${first},
-
-Thank you for the ${roleTitle} screening. We're keeping your profile on file and may reach out if a seat opens — or if another vertical is a better fit.
-
-— ${COMPANY.brand} Hiring
-`;
-      const html = emailShell(`
-        <p style="margin:0 0 10px;color:#BA5B33;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase">Interview received</p>
-        <h1 style="margin:0 0 14px;font-size:26px;font-weight:400;color:#231D15;font-family:Georgia,serif">Thanks, ${escapeHtml(first)}</h1>
-        <p style="color:#6E6455;line-height:1.6">We're keeping your <strong>${escapeHtml(roleTitle)}</strong> interview on file. You're welcome to apply to another industry seat if it's a better fit.</p>
-      `);
-      return { subject, text, html };
-    }
-
-    // rejected
-    const subject = `Update on your ${roleTitle} application`;
+    const subject = `We received your ${roleTitle} interview — ${brand}`;
     const text = `Hi ${first},
 
-Thank you for interviewing for ${roleTitle} at ${brand}. We're not moving forward with this application at this time. You're welcome to reapply later as you grow your closing experience.
+Thank you for completing your ${roleTitle} interview with ${brand}.
+
+Our hiring team will review your application and contact you by email or phone after the review. Typical response time is 1–3 business days.
+
+There's nothing else you need to do right now.
 
 — ${COMPANY.brand} Hiring
 `;
     const html = emailShell(`
-      <p style="margin:0 0 10px;color:#BA5B33;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase">Application update</p>
+      <p style="margin:0 0 10px;color:#BA5B33;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase">Interview received</p>
       <h1 style="margin:0 0 14px;font-size:26px;font-weight:400;color:#231D15;font-family:Georgia,serif">Thank you, ${escapeHtml(first)}</h1>
-      <p style="color:#6E6455;line-height:1.6">We've decided not to move forward with the <strong>${escapeHtml(roleTitle)}</strong> role this round.</p>
-      <p style="color:#93876F;font-size:14px">You're welcome to reapply later or try another vertical seat.</p>
+      <p style="color:#6E6455;line-height:1.6">Your <strong style="color:#231D15">${escapeHtml(roleTitle)}</strong> interview was submitted successfully.</p>
+      <p style="color:#6E6455;line-height:1.6">Our hiring team will review your conversation and contact you after the review — usually within <strong style="color:#231D15">1–3 business days</strong>.</p>
+      <p style="color:#93876F;font-size:14px">There's nothing else you need to do right now.</p>
     `);
     return { subject, text, html };
   }
