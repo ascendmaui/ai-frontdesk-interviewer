@@ -106,6 +106,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ interviews: apps });
   }
 
+  if (action === "reanalyze") {
+    const { evaluateTranscript } = await import("@/lib/evaluate");
+    const { applyDecision } = await import("@/lib/decision");
+    const { buildHireVerdict } = await import("@/lib/hire-analysis");
+    const { mergeMultitaskIntoScorecard } = await import("@/lib/pipeline");
+
+    const transcript = root.transcript || [];
+    const durationSec = root.durationSec || 0;
+    let scorecard = await evaluateTranscript({
+      roleSlug: root.roleSlug,
+      candidateName: `${root.candidate.firstName} ${root.candidate.lastName}`,
+      transcript,
+      durationSec,
+      kind: root.kind || "screening",
+      multitask: root.multitaskQuiz,
+    });
+    scorecard = applyDecision(scorecard, durationSec);
+    if (root.kind === "screening" && root.multitaskQuiz) {
+      scorecard = mergeMultitaskIntoScorecard(scorecard, root.multitaskQuiz);
+      scorecard = applyDecision(scorecard, durationSec);
+    }
+    const hireVerdict = buildHireVerdict({
+      scorecard,
+      multitask: root.multitaskQuiz,
+      transcript,
+      durationSec,
+    });
+    scorecard = {
+      ...scorecard,
+      recommendation: hireVerdict.decision,
+      overallScore: hireVerdict.overallScore,
+    };
+    await updateInterview(id, {
+      scorecard,
+      hireVerdict,
+      status: root.status === "in_progress" ? "completed" : root.status,
+      completedAt: root.completedAt || new Date().toISOString(),
+    });
+    return NextResponse.json({ ok: true, hireVerdict, scorecard });
+  }
+
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
 

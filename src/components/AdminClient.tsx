@@ -20,12 +20,40 @@ type Row = {
     recommendation?: string;
     summary?: string;
   };
+  hireVerdict?: {
+    decision?: string;
+    label?: string;
+    headline?: string;
+    overallScore?: number;
+    confidence?: string;
+  };
   multitaskQuiz?: {
     multitaskScore?: number;
     correctCount?: number;
     scoredCount?: number;
   };
   portalToken?: string;
+};
+
+type HireVerdictView = {
+  decision: string;
+  label: string;
+  color: string;
+  headline: string;
+  confidence: string;
+  summary: string;
+  overallScore: number;
+  strengths: string[];
+  risks: string[];
+  nextAction: string;
+  evidence: {
+    talkTurns: number;
+    candidateTurns: number;
+    assistantTurns: number;
+    durationSec: number;
+    multitaskScore?: number;
+    transcriptAvailable: boolean;
+  };
 };
 
 type SessionDetail = {
@@ -45,6 +73,7 @@ type SessionDetail = {
     rolePlayNotes?: string;
     nextStep?: string;
   };
+  hireVerdict?: HireVerdictView;
   multitaskQuiz?: {
     multitaskScore?: number;
     correctCount?: number;
@@ -66,6 +95,7 @@ type SessionDetail = {
     text: string;
     at: number;
   }[];
+  eventTypes?: string[];
 };
 
 type Detail = {
@@ -90,6 +120,7 @@ type Detail = {
       utmCampaign?: string;
     };
     scorecard?: SessionDetail["scorecard"];
+    hireVerdict?: SessionDetail["hireVerdict"];
     multitaskQuiz?: SessionDetail["multitaskQuiz"];
     offer?: { token?: string; status?: string };
   };
@@ -220,12 +251,89 @@ export function AdminClient() {
           </div>
           <div className="text-right">
             <p className="hl-serif text-3xl text-[var(--ink)]">
-              {app.scorecard?.overallScore ?? "—"}
+              {app.hireVerdict?.overallScore ??
+                app.scorecard?.overallScore ??
+                "—"}
               <span className="text-base text-[var(--ink-faint)]">/10</span>
             </p>
             <p className="text-sm font-medium text-[var(--accent)]">
-              {REC_EMOJI[rec]} {REC_LABEL[rec] || rec}
+              {REC_EMOJI[rec]}{" "}
+              {app.hireVerdict?.label || REC_LABEL[rec] || rec}
             </p>
+          </div>
+        </div>
+
+        {/* Hire verdict banner */}
+        <div
+          className={`rounded-[22px] border p-5 ${
+            app.hireVerdict?.color === "green"
+              ? "border-[var(--success-border)] bg-[var(--success-bg)]"
+              : app.hireVerdict?.color === "red"
+                ? "border-[var(--danger-border)] bg-[var(--danger-bg)]"
+                : "border-[var(--accent-border)] bg-[var(--accent-wash)]"
+          }`}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
+            AI hire analysis
+            {app.hireVerdict?.confidence
+              ? ` · ${app.hireVerdict.confidence} confidence`
+              : ""}
+          </p>
+          <p className="hl-serif mt-1 text-xl text-[var(--ink)]">
+            {app.hireVerdict?.headline ||
+              (app.scorecard
+                ? `${REC_LABEL[rec] || "Review needed"}`
+                : "No analysis yet — click Re-run analysis")}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--ink-soft)]">
+            {app.hireVerdict?.summary ||
+              app.scorecard?.summary ||
+              "This interview has no scorecard yet. If a transcript exists below, re-run analysis."}
+          </p>
+          {app.hireVerdict?.nextAction && (
+            <p className="mt-3 text-sm font-medium text-[var(--ink)]">
+              Recommended next step: {app.hireVerdict.nextAction}
+            </p>
+          )}
+          {app.hireVerdict?.evidence && (
+            <p className="mt-2 text-[12px] text-[var(--ink-faint)]">
+              Evidence: {app.hireVerdict.evidence.candidateTurns} candidate
+              turns · {app.hireVerdict.evidence.assistantTurns} agent turns ·{" "}
+              {Math.floor((app.hireVerdict.evidence.durationSec || 0) / 60)}m
+              talk · transcript{" "}
+              {app.hireVerdict.evidence.transcriptAvailable
+                ? "captured"
+                : "MISSING"}
+              {app.hireVerdict.evidence.multitaskScore != null
+                ? ` · multitask ${app.hireVerdict.evidence.multitaskScore}/10`
+                : ""}
+            </p>
+          )}
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {!!app.hireVerdict?.strengths?.length && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase text-[var(--success)]">
+                  Strengths
+                </p>
+                <ul className="mt-1 space-y-1 text-sm text-[var(--ink-soft)]">
+                  {app.hireVerdict.strengths.map((s) => (
+                    <li key={s}>· {s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!!app.hireVerdict?.risks?.length && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase text-[var(--accent)]">
+                  Risks / gaps
+                </p>
+                <ul className="mt-1 space-y-1 text-sm text-[var(--ink-soft)]">
+                  {app.hireVerdict.risks.map((s) => (
+                    <li key={s}>· {s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
@@ -282,6 +390,13 @@ export function AdminClient() {
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void action(app.id, "reanalyze")}
+            className="rounded-full border border-[var(--accent-border)] bg-[var(--accent-wash)] px-3 py-2 text-xs font-semibold text-[var(--accent)]"
+          >
+            Re-run analysis
+          </button>
           {(
             [
               ["send_offer", "Send offer"],
@@ -391,11 +506,13 @@ export function AdminClient() {
               </div>
               <div className="shrink-0 text-left sm:text-right">
                 <p className="hl-serif text-2xl text-[var(--ink)]">
-                  {r.scorecard?.overallScore ?? "—"}
+                  {r.hireVerdict?.overallScore ??
+                    r.scorecard?.overallScore ??
+                    "—"}
                   <span className="text-sm text-[var(--ink-faint)]">/10</span>
                 </p>
                 <p className="text-xs font-medium text-[var(--accent)]">
-                  {REC_LABEL[rec] || rec}
+                  {r.hireVerdict?.label || REC_LABEL[rec] || rec || "No grade"}
                 </p>
                 {r.multitaskQuiz?.multitaskScore != null && (
                   <p className="text-[11px] text-[var(--ink-faint)]">

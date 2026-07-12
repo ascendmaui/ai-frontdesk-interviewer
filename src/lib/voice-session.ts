@@ -23,6 +23,7 @@ export type VoiceSessionHandlers = {
   onLevel?: (level: number) => void;
   onSpeaking?: (who: "user" | "assistant" | null) => void;
   onError?: (message: string) => void;
+  onEventType?: (type: string) => void;
 };
 
 type SessionTokenResponse = {
@@ -72,11 +73,17 @@ export class VoiceSession {
   private closed = false;
   private micMuted = false;
   private activeSources: AudioBufferSourceNode[] = [];
+  private eventTypes: string[] = [];
+  private seenItemIds = new Set<string>();
 
   constructor(private handlers: VoiceSessionHandlers = {}) {}
 
   getTranscript() {
     return [...this.transcript];
+  }
+
+  getEventTypes() {
+    return [...this.eventTypes];
   }
 
   setMuted(muted: boolean) {
@@ -395,6 +402,39 @@ export class VoiceSession {
     });
   }
 
+  private extractItemText(item: Record<string, unknown> | undefined): {
+    role: "user" | "assistant" | null;
+    text: string;
+    id?: string;
+  } {
+    if (!item || typeof item !== "object") return { role: null, text: "" };
+    const roleRaw = String(item.role || "");
+    const role =
+      roleRaw === "user" || roleRaw === "assistant"
+        ? (roleRaw as "user" | "assistant")
+        : null;
+    const content = item.content;
+    let text = "";
+    if (typeof item.transcript === "string") text = item.transcript;
+    if (Array.isArray(content)) {
+      for (const part of content) {
+        if (!part || typeof part !== "object") continue;
+        const p = part as Record<string, unknown>;
+        const t =
+          (typeof p.transcript === "string" && p.transcript) ||
+          (typeof p.text === "string" && p.text) ||
+          (typeof p.output_text === "string" && p.output_text) ||
+          "";
+        if (t) text = text ? `${text} ${t}` : t;
+      }
+    }
+    return {
+      role,
+      text: text.trim(),
+      id: typeof item.id === "string" ? item.id : undefined,
+    };
+  }
+
   private handleServerEvent(raw: string | Blob) {
     if (typeof raw !== "string") return;
     let event: Record<string, unknown>;
@@ -405,6 +445,11 @@ export class VoiceSession {
     }
 
     const type = String(event.type || "");
+    if (type) {
+      this.eventTypes.push(type);
+      if (this.eventTypes.length > 80) this.eventTypes.shift();
+      this.handlers.onEventType?.(type);
+    }
 
     switch (type) {
       case "input_audio_buffer.speech_started":
@@ -518,6 +563,59 @@ export class VoiceSession {
             (existing?.text || "") + text,
             true,
           );
+        }
+        break;
+      }
+
+      // History items (including force_message / seeded turns)
+      case "conversation.item.added":
+      case "conversation.item.created": {
+        const item = (event.item || event) as Record<string, unknown>;
+        const extracted = this.extractItemText(item);
+        if (!extracted.role || !extracted.text) break;
+        const key = extracted.id || `${extracted.role}:${extracted.text.slice(0, 40)}`;
+        if (this.seenItemIds.has(key)) break;
+        this.seenItemIds.add(key);
+        // Avoid duplicating live partials already tracked
+        const last = this.transcript[this.transcript.length - 1];
+        if (
+          last &&
+          last.role === extracted.role &&
+          (last.text === extracted.text ||
+            extracted.text.startsWith(last.text) ||
+            last.text.startsWith(extracted.text))
+        ) {
+          this.updateLine(last.id, extracted.text, false);
+          break;
+        }
+        this.pushLine({
+          id: extracted.id || uid(extracted.role === "user" ? "u" : "a"),
+          role: extracted.role,
+          text: extracted.text,
+          at: Date.now(),
+        });
+        break;
+      }
+
+      case "response.output_item.done": {
+        const item = event.item as Record<string, unknown> | undefined;
+        const extracted = this.extractItemText(item);
+        if (extracted.role === "assistant" && extracted.text) {
+          if (this.assistantPartialId) {
+            this.updateLine(this.assistantPartialId, extracted.text, false);
+            this.assistantPartialId = null;
+          } else {
+            const key = extracted.id || `a:${extracted.text.slice(0, 40)}`;
+            if (!this.seenItemIds.has(key)) {
+              this.seenItemIds.add(key);
+              this.pushLine({
+                id: extracted.id || uid("a"),
+                role: "assistant",
+                text: extracted.text,
+                at: Date.now(),
+              });
+            }
+          }
         }
         break;
       }

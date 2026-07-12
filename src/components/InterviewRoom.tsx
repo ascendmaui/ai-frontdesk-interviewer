@@ -59,6 +59,28 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
   const multitaskRef = useRef<MultitaskAnswer[]>([]);
   const endingRef = useRef(false);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const syncTimerRef = useRef<number | null>(null);
+
+  const syncToServer = useCallback(async () => {
+    const durationSec = startedAtRef.current
+      ? Math.floor((Date.now() - startedAtRef.current) / 1000)
+      : 0;
+    try {
+      await fetch(`/api/interview/${interviewId}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: transcriptRef.current,
+          durationSec,
+          multitaskAnswers: multitaskRef.current,
+          eventTypes: sessionRef.current?.getEventTypes?.() || [],
+        }),
+        keepalive: true,
+      });
+    } catch {
+      /* best-effort */
+    }
+  }, [interviewId]);
 
   const agentName = meta?.agentName || "Jordan";
   const isScreening = (meta?.kind || "screening") === "screening";
@@ -106,6 +128,34 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     return () => clearInterval(id);
   }, [phase, status]);
 
+  // Persist transcript every 8s while live
+  useEffect(() => {
+    if (phase !== "live" || status !== "live") return;
+    void syncToServer();
+    syncTimerRef.current = window.setInterval(() => {
+      void syncToServer();
+    }, 8000);
+    return () => {
+      if (syncTimerRef.current) window.clearInterval(syncTimerRef.current);
+      syncTimerRef.current = null;
+    };
+  }, [phase, status, syncToServer]);
+
+  // Flush on tab close
+  useEffect(() => {
+    const onHide = () => {
+      if (phase === "live" && transcriptRef.current.length) {
+        void syncToServer();
+      }
+    };
+    window.addEventListener("pagehide", onHide);
+    window.addEventListener("beforeunload", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("beforeunload", onHide);
+    };
+  }, [phase, syncToServer]);
+
   const clearQuizTimers = useCallback(() => {
     quizTimers.current.forEach((t) => window.clearTimeout(t));
     quizTimers.current = [];
@@ -115,6 +165,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     return () => {
       void sessionRef.current?.stop();
       clearQuizTimers();
+      if (syncTimerRef.current) window.clearInterval(syncTimerRef.current);
     };
   }, [clearQuizTimers]);
 
@@ -153,6 +204,10 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         ? Math.floor((Date.now() - startedAtRef.current) / 1000)
         : elapsed;
 
+      const eventTypes = sessionRef.current?.getEventTypes?.() || [];
+      const finalTranscript =
+        sessionRef.current?.getTranscript?.() || transcriptRef.current;
+
       try {
         await sessionRef.current?.stop();
       } catch {
@@ -160,15 +215,34 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
       }
       sessionRef.current = null;
 
+      // Final sync before score
+      try {
+        await fetch(`/api/interview/${interviewId}/sync`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transcript: finalTranscript,
+            durationSec,
+            multitaskAnswers: multitaskRef.current,
+            eventTypes,
+          }),
+          keepalive: true,
+        });
+      } catch {
+        /* best-effort */
+      }
+
       try {
         const res = await fetch("/api/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             interviewId,
-            transcript: transcriptRef.current,
+            transcript: finalTranscript,
             durationSec,
             multitaskAnswers: multitaskRef.current,
+            eventTypes,
+            force: true,
           }),
         });
         const data = await res.json();

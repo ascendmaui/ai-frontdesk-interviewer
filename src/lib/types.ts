@@ -56,6 +56,29 @@ export type Scorecard = {
   raw?: string;
 };
 
+/** Admin-only hiring verdict (never shown to candidates). */
+export type HireVerdict = {
+  decision: Recommendation | string;
+  label: string;
+  color: "green" | "yellow" | "gray" | "red";
+  headline: string;
+  confidence: "high" | "medium" | "low";
+  summary: string;
+  overallScore: number;
+  strengths: string[];
+  risks: string[];
+  nextAction: string;
+  evidence: {
+    talkTurns: number;
+    candidateTurns: number;
+    assistantTurns: number;
+    durationSec: number;
+    multitaskScore?: number;
+    multitaskAccuracy?: number;
+    transcriptAvailable: boolean;
+  };
+};
+
 export type CandidateApplication = {
   firstName: string;
   lastName: string;
@@ -127,7 +150,10 @@ export type InterviewRecord = {
   durationSec?: number;
   transcript: TranscriptLine[];
   scorecard?: Scorecard;
+  hireVerdict?: HireVerdict;
   multitaskQuiz?: MultitaskResult;
+  /** Debug: last N realtime event types (admin only) */
+  eventTypes?: string[];
   hmInterviewId?: string;
   onboardingInterviewId?: string;
   practicePitchSessionId?: string;

@@ -32,12 +32,28 @@ export async function evaluateTranscript(opts: {
   if (!lines.trim()) {
     return {
       overallScore: 1,
-      recommendation: kind === "onboarding" ? "maybe" : "maybe",
-      summary: "Session transcript was empty or incomplete.",
+      recommendation: "maybe",
+      summary:
+        "NO TRANSCRIPT CAPTURED. Cannot grade sales ability. Candidate should re-run the voice interview on a stable connection and press End interview when finished so scoring can run.",
       strengths: [],
-      developmentAreas: ["Complete a full voice session"],
-      scores: {},
-      nextStep: "Re-run when audio works.",
+      developmentAreas: [
+        "No conversation text available for scoring",
+        "Ensure mic permission and complete the full interview",
+      ],
+      scores: {
+        rapport: 1,
+        discovery: 1,
+        productClarity: 1,
+        objectionHandling: 1,
+        closing: 1,
+        verticalFit: 1,
+        coachability: 1,
+        energy: 1,
+        multitasking: opts.multitask?.multitaskScore || 1,
+      },
+      rolePlayNotes: "Role-play not captured.",
+      nextStep:
+        "Invite candidate to re-take the interview; do not hire based on this empty session.",
     };
   }
 
@@ -52,11 +68,18 @@ export async function evaluateTranscript(opts: {
 Score a voice SCREENING interview for: ${role?.title || opts.roleSlug} (${role?.industry || "sales"}).
 Evaluation emphasis: ${role?.weightNotes || "general sales closing"}
 Include multitasking ability if pop-up data is provided (do not invent pop-up results).
+You MUST produce a clear hire recommendation for a sales closer seat.
+recommendation meanings:
+- strong_yes: exceptional closer signal — advance immediately
+- yes: solid hire / advance to next stage
+- maybe: incomplete or mixed — human must decide
+- no: do not hire for this role
+
 Return ONLY valid JSON:
 {
   "overallScore": number 1-10,
   "recommendation": "strong_yes" | "yes" | "maybe" | "no",
-  "summary": string,
+  "summary": string (2-4 sentences: who they are as a seller + hire recommendation rationale),
   "strengths": string[2-4],
   "developmentAreas": string[1-3],
   "scores": {
@@ -71,9 +94,9 @@ Return ONLY valid JSON:
     "multitasking": number 1-10
   },
   "rolePlayNotes": string,
-  "nextStep": string
+  "nextStep": string (concrete ops action)
 }
-Be fair and specific. Incomplete interviews → maybe + conservative scores.
+Be fair and specific. Thin or incomplete interviews → maybe + conservative scores. Never invent transcript content.
 Product context:
 ${PRODUCT_KNOWLEDGE}
 Vertical ICP: ${role?.icp || "local businesses"}`

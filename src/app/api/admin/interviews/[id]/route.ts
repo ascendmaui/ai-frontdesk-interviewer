@@ -59,11 +59,19 @@ export async function GET(
       completedAt: s.completedAt,
       durationSec: s.durationSec,
       scorecard: s.scorecard,
+      hireVerdict: s.hireVerdict,
       multitaskQuiz: s.multitaskQuiz,
       transcript: s.transcript || [],
+      eventTypes: s.eventTypes,
       errorMessage: s.errorMessage,
       notifications: s.notifications,
     }));
+
+  // Prefer session with richest scorecard/transcript for top-level verdict
+  const best =
+    sessions.find((s) => s.hireVerdict) ||
+    sessions.find((s) => s.scorecard) ||
+    sessions[0];
 
   return NextResponse.json({
     application: {
@@ -82,16 +90,14 @@ export async function GET(
       training: root.training,
       hmInterviewId: root.hmInterviewId,
       onboardingInterviewId: root.onboardingInterviewId,
-      // Latest / root-level scores for quick glance
-      scorecard: root.scorecard,
-      multitaskQuiz: root.multitaskQuiz,
+      scorecard: root.scorecard || best?.scorecard,
+      hireVerdict: root.hireVerdict || best?.hireVerdict,
+      multitaskQuiz: root.multitaskQuiz || best?.multitaskQuiz,
     },
     sessions,
-    // Voice: live audio is streamed via xAI and not persisted by default.
-    // Transcript is the durable review artifact.
     media: {
       audioRecording: null,
-      note: "Live audio is streamed through Grok Voice and is not stored. Full transcript is available for each stage below.",
+      note: "Live audio streams through Grok Voice and is not saved as a playable file. The full transcript + AI hire analysis below is the review package. Use Re-run analysis if scores are missing.",
     },
   });
 }

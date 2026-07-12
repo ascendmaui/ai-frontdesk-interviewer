@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { applyDecision } from "@/lib/decision";
 import { evaluateTranscript } from "@/lib/evaluate";
+import { buildHireVerdict } from "@/lib/hire-analysis";
 import {
   scoreMultitask,
   type MultitaskAnswer,
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
     transcript?: TranscriptLine[];
     durationSec?: number;
     multitaskAnswers?: MultitaskAnswer[];
+    eventTypes?: string[];
     force?: boolean;
   };
   try {
@@ -59,9 +61,11 @@ export async function POST(req: Request) {
   }
 
   const kind = existing.kind || "screening";
-  const transcript = Array.isArray(body.transcript)
-    ? body.transcript
-    : existing.transcript || [];
+  // Prefer the richer of client vs already-synced transcript
+  const clientTx = Array.isArray(body.transcript) ? body.transcript : [];
+  const savedTx = existing.transcript || [];
+  const transcript =
+    clientTx.length >= savedTx.length ? clientTx : savedTx;
   const durationSec =
     typeof body.durationSec === "number"
       ? body.durationSec
@@ -90,6 +94,19 @@ export async function POST(req: Request) {
       scorecard = mergeMultitaskIntoScorecard(scorecard, multitask);
       scorecard = applyDecision(scorecard, durationSec);
     }
+
+    const hireVerdict = buildHireVerdict({
+      scorecard,
+      multitask,
+      transcript,
+      durationSec,
+    });
+    // Align scorecard recommendation with guarded verdict
+    scorecard = {
+      ...scorecard,
+      recommendation: hireVerdict.decision,
+      overallScore: hireVerdict.overallScore,
+    };
 
     const incomplete = durationSec > 0 && durationSec < INCOMPLETE_SEC;
     const status = incomplete ? "abandoned" : "completed";
@@ -183,6 +200,7 @@ export async function POST(req: Request) {
       durationSec,
       completedAt: new Date().toISOString(),
       scorecard,
+      hireVerdict,
       multitaskQuiz: multitask,
       pipelineStatus,
       hmInterviewId,
@@ -191,6 +209,9 @@ export async function POST(req: Request) {
       offer,
       setupTasks,
       training,
+      eventTypes: Array.isArray(body.eventTypes)
+        ? body.eventTypes.slice(-80)
+        : existing.eventTypes,
     });
 
     if (!interview) {
