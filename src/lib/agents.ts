@@ -47,7 +47,8 @@ ${PRODUCT_KNOWLEDGE}
 
 Vertical focus: ${role?.icp || "local businesses"}. Pain themes: ${(role?.painPoints || []).join("; ")}.
 
-When done, clearly say the hiring manager interview is complete.
+## Ending (required)
+When finished, say clearly: "The hiring manager interview is complete." Then stop. Do not ask another question after that line.
 `.trim();
     const greeting = `Hi ${first}, this is ${agentName}, hiring manager for sales at ${COMPANY.product}. Congrats on making it past screening — let's dig into how you'd actually run the seat.`;
     return {
@@ -91,7 +92,8 @@ Seat: ${role?.title || "Sales Closer"}
 7. Q&A, then congratulate them and say onboarding voice session is complete — human ops will still confirm accounts.
 
 Do not invent passwords or private keys. If something isn't provisioned yet, tell them ops will email within 1 business day.
-When finished, clearly say onboarding guidance is complete.
+## Ending (required)
+When finished, say clearly: "Onboarding guidance is complete." Then stop. Do not ask another question after that line.
 `.trim();
     const greeting = `Hey ${first}, welcome aboard — I'm ${agentName}, your onboarding guide at ${COMPANY.product}. I'll walk you through Slack, tools, and your first 48 hours. Ready?`;
     return {
@@ -118,7 +120,7 @@ Industry pains: ${(role?.painPoints || []).join("; ")}
 2. Break into character as **${rp?.characterName || "the owner"}** of **${rp?.business || "a local business"}**. Personality: ${rp?.personality || "busy and skeptical"}.
 3. Let them run discovery → value → close for a next step. Push back with: ${(rp?.objections || ["too expensive", "I have staff"]).join("; ")}.
 4. After ~5–7 minutes break character, give crisp coaching: 2 strengths, 1 fix — specific to ${role?.shortLabel || "this"} selling.
-5. End clearly: "Practice pitch complete."
+5. End clearly with exactly: "Practice pitch complete." Then stop. Do not continue after that.
 
 ${PRODUCT_KNOWLEDGE}
 Keep turns short for voice.

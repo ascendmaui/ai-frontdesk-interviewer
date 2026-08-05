@@ -303,6 +303,10 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
       onLevel: setLevel,
       onSpeaking: setSpeaking,
       onError: (msg) => setError(msg),
+      // Agent says "…is complete" → auto wrap up without waiting for End button
+      onAgentSessionComplete: () => {
+        if (!endingRef.current) void finish("ended");
+      },
     });
     sessionRef.current = session;
 
@@ -343,12 +347,24 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     }
     if (kind === "onboarding") {
       return {
-        title: "Onboarding with Riley",
-        body: "Walk through Slack, tools, and your first 48 hours. Have a note app ready if you like.",
+        title: `Onboarding with ${agentName}`,
+        body: `You'll speak with ${agentName} — walk through Slack, CRM, dialer, and your first 48 hours. Have a note app ready if you like.`,
         bullets: [
           "You'll get invite links by email too",
           "Ask questions anytime",
           "Ops provisions CRM/dialer if not live yet",
+          `Voice: ${meta?.agentTone || "friendly, patient"}`,
+        ],
+      };
+    }
+    if (kind === "practice_pitch") {
+      return {
+        title: `Practice pitch with ${agentName}`,
+        body: `${agentName} will brief you, then role-play a skeptical owner in your vertical. Pass at 7/10.`,
+        bullets: [
+          "Discovery → value → next step",
+          "Handle objections without inventing discounts",
+          `Voice: ${meta?.agentTone || "energetic coach"}`,
         ],
       };
     }
@@ -359,6 +375,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         "Speak naturally — multitask pop-ups test real closer load",
         "Includes industry role-play",
         "After you finish, our team reviews and will contact you",
+        `Voice: ${meta?.agentTone || "warm, professional"}`,
       ],
     };
   }, [agentName, kind, meta?.candidate?.firstName, meta?.agentTone, meta?.roleTitle]);
@@ -430,7 +447,15 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         <span className="truncate font-medium text-[var(--ink-soft)]">
           {meta?.roleEmoji} {meta?.roleTitle}
           {meta?.kind && meta.kind !== "screening"
-            ? ` · ${meta.kind === "hiring_manager" ? "HM" : "Onboarding"}`
+            ? ` · ${
+                meta.kind === "hiring_manager"
+                  ? "HM"
+                  : meta.kind === "onboarding"
+                    ? "Onboarding"
+                    : meta.kind === "practice_pitch"
+                      ? "Practice"
+                      : meta.kind
+              }`
             : ""}
         </span>
         <span className="font-mono text-[var(--ink)]">
@@ -454,7 +479,9 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
                 ? "Guide"
                 : meta?.kind === "hiring_manager"
                   ? "Hiring mgr"
-                  : "Interviewer"}
+                  : meta?.kind === "practice_pitch"
+                    ? "Coach"
+                    : "Interviewer"}
             </p>
             <p className="hl-serif text-[1.45rem] text-[var(--ink)]">
               {agentName}

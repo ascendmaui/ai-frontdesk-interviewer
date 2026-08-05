@@ -52,6 +52,50 @@ export function ProcessMenu({ context }: { context?: ProcessMenuContext }) {
 
   return (
     <>
+      {/* Desktop / wide: compact top step bar */}
+      <div className="mr-1 hidden max-w-[min(100vw-8rem,28rem)] items-center gap-1 overflow-x-auto md:flex">
+        {PROCESS_STEPS.map((step) => {
+          const unlocked = isStepUnlocked(step.id, status, links);
+          const href = unlocked
+            ? hrefForStep(step.id, {
+                applicationId: context?.applicationId,
+                portalToken: context?.portalToken,
+                screeningId: context?.screeningId,
+                hmInterviewId: context?.hmInterviewId,
+                offerToken: context?.offerToken,
+                onboardingInterviewId: context?.onboardingInterviewId,
+                roleSlug: context?.roleSlug,
+              })
+            : null;
+          const isCurrent = step.id === active;
+          const chip = (
+            <span
+              className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
+                isCurrent
+                  ? "bg-[var(--accent)] text-white"
+                  : unlocked
+                    ? "bg-[var(--bg-deep)] text-[var(--ink-soft)]"
+                    : "bg-transparent text-[var(--ink-faint)] opacity-50"
+              }`}
+            >
+              {step.shortLabel}
+            </span>
+          );
+          if (unlocked && href) {
+            return (
+              <Link key={step.id} href={href} title={step.description}>
+                {chip}
+              </Link>
+            );
+          }
+          return (
+            <span key={step.id} title={unlocked ? step.description : "Locked"}>
+              {chip}
+            </span>
+          );
+        })}
+      </div>
+
       <button
         type="button"
         aria-label="Open process menu"

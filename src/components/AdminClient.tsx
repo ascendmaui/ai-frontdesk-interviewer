@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AdminNav } from "@/components/AdminNav";
 import { REC_EMOJI, REC_LABEL, type Recommendation } from "@/lib/company";
 import {
   ADVANCE_REQUIREMENTS,
@@ -658,6 +659,7 @@ export function AdminClient() {
 
   return (
     <div className="space-y-4 animate-rise">
+      <AdminNav />
       <p className="hl-eyebrow">Internal</p>
       <h1 className="hl-serif text-[2rem] text-[var(--ink)]">
         Interview review

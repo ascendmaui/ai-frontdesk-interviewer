@@ -24,7 +24,38 @@ export type VoiceSessionHandlers = {
   onSpeaking?: (who: "user" | "assistant" | null) => void;
   onError?: (message: string) => void;
   onEventType?: (type: string) => void;
+  /** Fired when the agent signals the session is complete (auto-end). */
+  onAgentSessionComplete?: () => void;
 };
+
+/** Phrases that mean the agent finished and we should auto-end. */
+export function looksLikeSessionEnd(text: string): boolean {
+  const t = text.toLowerCase();
+  const patterns = [
+    "interview is complete",
+    "interview complete",
+    "session is complete",
+    "session complete",
+    "onboarding guidance is complete",
+    "onboarding is complete",
+    "onboarding complete",
+    "practice pitch complete",
+    "practice pitch is complete",
+    "hiring manager interview is complete",
+    "this concludes our",
+    "that concludes our",
+    "we've completed",
+    "we have completed",
+    "thank you for your time today",
+    "thanks for your time today",
+    "nothing else from my side",
+    "i'll let you go",
+    "you're all set for now",
+    "that wraps up",
+    "this wraps up",
+  ];
+  return patterns.some((p) => t.includes(p));
+}
 
 type SessionTokenResponse = {
   value?: string;
@@ -35,6 +66,8 @@ type SessionTokenResponse = {
   instructions?: string;
   greeting?: string;
   keyterms?: string[];
+  agentName?: string;
+  kind?: string;
 };
 
 function extractToken(data: SessionTokenResponse): string | null {
@@ -75,8 +108,23 @@ export class VoiceSession {
   private activeSources: AudioBufferSourceNode[] = [];
   private eventTypes: string[] = [];
   private seenItemIds = new Set<string>();
+  private lastAssistantFinal = "";
+  private sessionEndFired = false;
+  private sessionEndTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private handlers: VoiceSessionHandlers = {}) {}
+
+  private maybeScheduleAutoEnd(assistantText: string) {
+    if (this.sessionEndFired || !looksLikeSessionEnd(assistantText)) return;
+    this.lastAssistantFinal = assistantText;
+    if (this.sessionEndTimer) clearTimeout(this.sessionEndTimer);
+    // Wait for TTS to finish playing roughly, then end
+    this.sessionEndTimer = setTimeout(() => {
+      if (this.sessionEndFired || this.closed) return;
+      this.sessionEndFired = true;
+      this.handlers.onAgentSessionComplete?.();
+    }, 4500);
+  }
 
   getTranscript() {
     return [...this.transcript];
@@ -197,9 +245,10 @@ export class VoiceSession {
           }),
         );
 
+        const agentLabel = tokenJson.agentName || "the agent";
         const greet =
           tokenJson.greeting ||
-          "Welcome to your sales closer interview. I'm Jordan.";
+          `Welcome. I'm ${agentLabel}.`;
 
         ws.send(
           JSON.stringify({
@@ -215,12 +264,19 @@ export class VoiceSession {
 
         setTimeout(() => {
           if (this.closed || ws.readyState !== WebSocket.OPEN) return;
+          const continueHint =
+            tokenJson.kind === "hiring_manager"
+              ? "Continue the hiring manager interview after the greeting. Do not re-ask for name, email, or phone."
+              : tokenJson.kind === "onboarding"
+                ? "Continue onboarding after the greeting. Walk through Slack, tools, and first 48 hours."
+                : tokenJson.kind === "practice_pitch"
+                  ? "Continue the practice pitch after the greeting. Brief them, then role-play as the owner."
+                  : "Continue the interview naturally after the greeting. Set expectations for a ~12–15 minute interview with a role-play, then ask for a 45-second intro. Do not re-ask for name, email, or phone.";
           ws.send(
             JSON.stringify({
               type: "response.create",
               response: {
-                instructions:
-                  "Continue the interview naturally after the greeting. Set expectations for a ~12–15 minute interview with a role-play, then ask for a 45-second intro. Do not re-ask for name, email, or phone.",
+                instructions: continueHint,
               },
             }),
           );
@@ -228,7 +284,9 @@ export class VoiceSession {
 
         await this.startMicCapture();
         this.handlers.onStatus?.("live");
-        this.pushSystem("Connected — speak naturally when Jordan finishes.");
+        this.pushSystem(
+          `Connected — speak naturally when ${agentLabel} finishes.`,
+        );
       };
 
       ws.onmessage = (ev) => this.handleServerEvent(ev.data);
@@ -497,24 +555,22 @@ export class VoiceSession {
       case "response.output_audio_transcript.done":
       case "response.audio_transcript.done": {
         const text = String(event.transcript || "");
+        const finalText =
+          text ||
+          this.transcript.find((l) => l.id === this.assistantPartialId)?.text ||
+          "";
         if (this.assistantPartialId) {
-          this.updateLine(
-            this.assistantPartialId,
-            text ||
-              this.transcript.find((l) => l.id === this.assistantPartialId)
-                ?.text ||
-              "",
-            false,
-          );
-        } else if (text) {
+          this.updateLine(this.assistantPartialId, finalText, false);
+        } else if (finalText) {
           this.pushLine({
             id: uid("a"),
             role: "assistant",
-            text,
+            text: finalText,
             at: Date.now(),
           });
         }
         this.assistantPartialId = null;
+        if (finalText) this.maybeScheduleAutoEnd(finalText);
         break;
       }
 
@@ -620,9 +676,15 @@ export class VoiceSession {
         break;
       }
 
-      case "response.done":
+      case "response.done": {
         this.handlers.onSpeaking?.(null);
+        // Fallback: scan last assistant line if done event had no transcript.done
+        const lastA = [...this.transcript]
+          .reverse()
+          .find((l) => l.role === "assistant" && l.text && !l.partial);
+        if (lastA?.text) this.maybeScheduleAutoEnd(lastA.text);
         break;
+      }
 
       case "error": {
         const err = event.error as { message?: string } | undefined;
