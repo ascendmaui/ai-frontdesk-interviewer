@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { REC_EMOJI, REC_LABEL, type Recommendation } from "@/lib/company";
+import {
+  ADVANCE_REQUIREMENTS,
+  DIMENSION_RUBRIC,
+  SCORE_BANDS,
+  bandForScore,
+  explainScore,
+} from "@/lib/scoring-rubric";
 
 type Row = {
   id: string;
@@ -148,6 +155,12 @@ export function AdminClient() {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [filter, setFilter] = useState("");
+  const [actionLinks, setActionLinks] = useState<Record<
+    string,
+    string | null
+  > | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [showRubric, setShowRubric] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -192,24 +205,35 @@ export function AdminClient() {
     }
   }
 
-  async function action(id: string, actionName: string) {
+  async function action(id: string, actionName: string, roleSlug?: string) {
     setMsg(null);
-    const res = await fetch("/api/admin/action", {
-      method: "POST",
-      headers: {
-        ...authHeaders(secret),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id, action: actionName }),
-    });
-    const j = await res.json();
-    if (!res.ok) {
-      setMsg(j.error || "Action failed");
-      return;
+    setBusyAction(actionName);
+    setActionLinks(null);
+    try {
+      const res = await fetch("/api/admin/action", {
+        method: "POST",
+        headers: {
+          ...authHeaders(secret),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, action: actionName, roleSlug }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        setMsg(`❌ ${j.error || "Action failed"}`);
+        return;
+      }
+      setMsg(`✓ ${j.message || actionName}`);
+      if (j.links) setActionLinks(j.links);
+      // Prefer returned application id for test user create
+      const refreshId = j.id || id;
+      await load();
+      if (refreshId) await openDetail(refreshId);
+    } catch (e) {
+      setMsg(e instanceof Error ? `❌ ${e.message}` : "❌ Network error");
+    } finally {
+      setBusyAction(null);
     }
-    setMsg(`OK: ${actionName}`);
-    void load();
-    if (detail?.application.id === id) void openDetail(id);
   }
 
   const filtered = rows.filter((r) => {
@@ -388,45 +412,233 @@ export function AdminClient() {
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => void action(app.id, "reanalyze")}
-            className="rounded-full border border-[var(--accent-border)] bg-[var(--accent-wash)] px-3 py-2 text-xs font-semibold text-[var(--accent)]"
-          >
-            Re-run analysis
-          </button>
-          {(
-            [
-              ["send_offer", "Send offer"],
-              ["force_hm", "Invite to HM"],
-              ["force_onboarding", "Start onboarding"],
-              ["production_ready", "Mark ready"],
-              ["reject", "Reject"],
-            ] as const
-          ).map(([act, label]) => (
-            <button
-              key={act}
-              type="button"
-              onClick={() => void action(app.id, act)}
-              className={`rounded-full border px-3 py-2 text-xs font-semibold ${
-                act === "reject"
-                  ? "border-[var(--danger-border)] text-[var(--danger)]"
-                  : "border-[var(--line-strong)] text-[var(--ink-soft)]"
+        {/* Pipeline walkthrough */}
+        <div className="hl-card-solid space-y-3 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+            Pipeline controls (testing + ops)
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["reanalyze", "Re-run analysis"],
+                ["simulate_pass_screening", "Force pass → HM"],
+                ["force_hm", "Invite / open HM"],
+                ["send_offer", "Create offer"],
+                ["force_onboarding", "Start onboarding"],
+                ["unlock_training", "Unlock training"],
+                ["production_ready", "Mark production ready"],
+                ["reject", "Reject"],
+              ] as const
+            ).map(([act, label]) => (
+              <button
+                key={act}
+                type="button"
+                disabled={busyAction === act}
+                onClick={() => void action(app.id, act)}
+                className={`rounded-full border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${
+                  act === "reject"
+                    ? "border-[var(--danger-border)] text-[var(--danger)]"
+                    : act === "simulate_pass_screening" || act === "force_hm"
+                      ? "border-[var(--accent-border)] bg-[var(--accent-wash)] text-[var(--accent)]"
+                      : "border-[var(--line-strong)] text-[var(--ink-soft)]"
+                }`}
+              >
+                {busyAction === act ? "Working…" : label}
+              </button>
+            ))}
+          </div>
+          {msg && (
+            <p
+              className={`text-sm ${
+                msg.startsWith("❌")
+                  ? "text-[var(--danger)]"
+                  : "text-[var(--success)]"
               }`}
             >
-              {label}
-            </button>
-          ))}
+              {msg}
+            </p>
+          )}
+          {actionLinks && (
+            <div className="flex flex-col gap-2 border-t border-[var(--line)] pt-3">
+              <p className="text-[11px] font-semibold uppercase text-[var(--ink-faint)]">
+                Open next step
+              </p>
+              {actionLinks.hmInterviewUrl && (
+                <a
+                  href={actionLinks.hmInterviewUrl}
+                  className="hl-btn-primary text-center text-sm"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Talk to hiring manager (Morgan) →
+                </a>
+              )}
+              {actionLinks.offerUrl && (
+                <a
+                  href={actionLinks.offerUrl}
+                  className="hl-btn-secondary text-center text-sm"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open offer page →
+                </a>
+              )}
+              {actionLinks.onboardingUrl && (
+                <a
+                  href={actionLinks.onboardingUrl}
+                  className="hl-btn-secondary text-center text-sm"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Talk to onboarding (Riley) →
+                </a>
+              )}
+              {actionLinks.trainUrl && (
+                <a
+                  href={actionLinks.trainUrl}
+                  className="hl-btn-secondary text-center text-sm"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open training academy →
+                </a>
+              )}
+              {actionLinks.portalUrl && (
+                <a
+                  href={actionLinks.portalUrl}
+                  className="text-center text-sm font-medium text-[var(--accent)]"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Candidate portal →
+                </a>
+              )}
+            </div>
+          )}
         </div>
-        {msg && <p className="text-sm text-[var(--success)]">{msg}</p>}
 
-        {detail.media?.note && (
-          <p className="rounded-xl border border-[var(--line)] bg-white/50 px-3 py-2 text-[12px] text-[var(--ink-faint)]">
-            {detail.media.note}
+        {/* Scoring explanation */}
+        <div className="hl-card space-y-3 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
+              Why this score · what it takes to advance
+            </p>
+            <button
+              type="button"
+              className="text-xs font-medium text-[var(--accent)]"
+              onClick={() => setShowRubric((v) => !v)}
+            >
+              {showRubric ? "Hide full rubric" : "Show full rubric"}
+            </button>
+          </div>
+          {(() => {
+            const score =
+              app.hireVerdict?.overallScore ?? app.scorecard?.overallScore;
+            const band = bandForScore(score);
+            const turns =
+              detail.sessions.reduce(
+                (n, s) =>
+                  n +
+                  (s.transcript || []).filter((t) => t.role === "user").length,
+                0,
+              ) || 0;
+            const explanations = explainScore({
+              overallScore: score,
+              recommendation:
+                app.hireVerdict?.decision || app.scorecard?.recommendation,
+              candidateTurns: turns,
+              durationSec: detail.sessions.reduce(
+                (n, s) => n + (s.durationSec || 0),
+                0,
+              ),
+              multitaskScore:
+                app.multitaskQuiz?.multitaskScore ??
+                app.hireVerdict?.evidence?.multitaskScore,
+            });
+            return (
+              <>
+                <p className="hl-serif text-lg text-[var(--ink)]">{band.label}</p>
+                <ul className="space-y-1.5 text-sm text-[var(--ink-soft)]">
+                  {explanations.map((line) => (
+                    <li key={line}>· {line}</li>
+                  ))}
+                </ul>
+                {app.scorecard?.scores && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {Object.entries(app.scorecard.scores).map(([k, v]) => {
+                      const dim = DIMENSION_RUBRIC.find((d) => d.key === k);
+                      return (
+                        <div
+                          key={k}
+                          className="rounded-lg border border-[var(--line)] bg-white/60 px-2 py-2 text-xs"
+                          title={dim?.whatItMeasures}
+                        >
+                          <div className="flex justify-between">
+                            <span className="capitalize text-[var(--ink-faint)]">
+                              {dim?.label || k}
+                            </span>
+                            <span className="font-semibold">{v}/10</span>
+                          </div>
+                          {dim && (
+                            <p className="mt-1 text-[10px] leading-snug text-[var(--ink-faint)]">
+                              ≥6: {dim.toScore6}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {showRubric && (
+                  <div className="space-y-2 border-t border-[var(--line)] pt-3">
+                    {SCORE_BANDS.map((b) => (
+                      <div
+                        key={b.label}
+                        className="rounded-xl border border-[var(--line)] bg-white/50 p-3 text-xs"
+                      >
+                        <p className="font-semibold text-[var(--ink)]">
+                          {b.label}
+                        </p>
+                        <p className="mt-1 text-[var(--ink-muted)]">{b.meaning}</p>
+                        <p className="mt-1 text-[var(--accent)]">{b.advance}</p>
+                      </div>
+                    ))}
+                    <p className="text-[12px] text-[var(--ink-muted)]">
+                      Auto-advance: {ADVANCE_REQUIREMENTS.autoAdvance}
+                    </p>
+                    <p className="text-[12px] text-[var(--ink-muted)]">
+                      Borderline: {ADVANCE_REQUIREMENTS.borderline}
+                    </p>
+                    <p className="text-[12px] text-[var(--ink-muted)]">
+                      Block: {ADVANCE_REQUIREMENTS.block}
+                    </p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+
+        {/* Voice / recording note */}
+        <div className="rounded-xl border border-[var(--line)] bg-white/50 px-3 py-3 text-[12px] text-[var(--ink-muted)]">
+          <p className="font-semibold text-[var(--ink)]">Voice recording</p>
+          <p className="mt-1">
+            Live audio streams through Grok Voice and is not stored as a
+            downloadable file in this app. Review the full transcript below. For
+            account-level voice usage, open the xAI console.
           </p>
-        )}
+          <a
+            href="https://console.x.ai/"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block font-medium text-[var(--accent)]"
+          >
+            Open xAI console →
+          </a>
+          {detail.media?.note && (
+            <p className="mt-2 text-[var(--ink-faint)]">{detail.media.note}</p>
+          )}
+        </div>
 
         {/* Sessions */}
         {detail.sessions.map((session) => (
@@ -444,7 +656,8 @@ export function AdminClient() {
       </h1>
       <p className="text-sm text-[var(--ink-muted)]">
         Scores, multitask results, and full transcripts. Candidates never see
-        this data.
+        this data. Use pipeline controls to walk HM → offer → onboarding → train
+        without redoing forms.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -464,6 +677,57 @@ export function AdminClient() {
           {loading ? "Loading…" : "Load interviews"}
         </button>
       </div>
+
+      {secret && (
+        <button
+          type="button"
+          disabled={!!busyAction}
+          onClick={() =>
+            void action("", "create_test_user", "hvac-closer")
+          }
+          className="hl-btn-secondary w-full text-sm"
+        >
+          {busyAction === "create_test_user"
+            ? "Creating…"
+            : "Create admin test user (skip forms · jump to HM)"}
+        </button>
+      )}
+      {msg && !detail && (
+        <p
+          className={`text-sm ${
+            msg.startsWith("❌") ? "text-[var(--danger)]" : "text-[var(--success)]"
+          }`}
+        >
+          {msg}
+        </p>
+      )}
+      {actionLinks && !detail && (
+        <div className="hl-card space-y-2 p-4">
+          <p className="text-xs font-semibold uppercase text-[var(--ink-faint)]">
+            Test pipeline links
+          </p>
+          {actionLinks.hmInterviewUrl && (
+            <a
+              className="block font-medium text-[var(--accent)]"
+              href={actionLinks.hmInterviewUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open HM interview →
+            </a>
+          )}
+          {actionLinks.portalUrl && (
+            <a
+              className="block text-sm text-[var(--ink-muted)]"
+              href={actionLinks.portalUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Portal →
+            </a>
+          )}
+        </div>
+      )}
 
       {rows.length > 0 && (
         <input
