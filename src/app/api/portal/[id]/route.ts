@@ -31,6 +31,12 @@ export async function GET(
   const role = getRole(root.roleSlug);
   const progress = setupProgress(root.setupTasks);
 
+  const osBase = (
+    process.env.HEARTHLINE_OS_URL ||
+    process.env.NEXT_PUBLIC_HEARTHLINE_OS_URL ||
+    "https://hearthline-gold.vercel.app"
+  ).replace(/\/$/, "");
+
   return NextResponse.json({
     id: root.id,
     portalToken: root.portalToken,
@@ -39,6 +45,14 @@ export async function GET(
     roleEmoji: role?.emoji,
     industry: role?.industry,
     pipelineStatus: root.pipelineStatus,
+    hearthlineOs: {
+      loginUrl: `${osBase}/os/login`,
+      jobKitUrl: `${osBase}/os/job-kit`,
+      dashboardUrl: `${osBase}/os`,
+      playbookUrl: `${osBase}/os/playbook`,
+      note:
+        "Sign in with the same Google email you applied with. Your seat, leads, and job kit unlock after production ready.",
+    },
     steps: pipelineSteps(root.pipelineStatus),
     candidate: {
       firstName: root.candidate.firstName,

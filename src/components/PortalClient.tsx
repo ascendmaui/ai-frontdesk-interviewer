@@ -33,6 +33,13 @@ type PortalData = {
   };
   calendarUrl?: string | null;
   multitask?: { score: number; correct: number; scored: number } | null;
+  hearthlineOs?: {
+    loginUrl: string;
+    jobKitUrl: string;
+    dashboardUrl: string;
+    playbookUrl: string;
+    note: string;
+  };
   error?: string;
 };
 
@@ -117,9 +124,15 @@ export function PortalClient({
       </div>
 
       {primary && (
+        primary.external ? (
+          <a href={primary.href} className="hl-btn-primary w-full" target="_blank" rel="noreferrer">
+            {primary.label}
+          </a>
+        ) : (
         <Link href={primary.href} className="hl-btn-primary w-full">
           {primary.label}
         </Link>
+        )
       )}
 
       {data.multitask && (
@@ -127,6 +140,40 @@ export function PortalClient({
           Multitask screen: {data.multitask.correct}/{data.multitask.scored} ·{" "}
           {data.multitask.score}/10
         </div>
+      )}
+
+      {data.pipelineStatus === "production_ready" && data.hearthlineOs && (
+        <section className="hl-card-solid space-y-3 p-5">
+          <h2 className="hl-serif text-xl text-[var(--ink)]">Your Hearthline OS seat</h2>
+          <p className="text-sm text-[var(--ink-muted)]">{data.hearthlineOs.note}</p>
+          <p className="text-sm text-[var(--ink)]">
+            Use <strong>{data.candidate.email}</strong> with Google. You're provisioned as{" "}
+            <strong>{data.roleTitle || "Sales Closer"}</strong> with vertical leads and a full job kit.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <a
+              href={data.hearthlineOs.loginUrl}
+              className="hl-btn-primary flex-1 text-center"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Sign in to Hearthline OS
+            </a>
+            <a
+              href={data.hearthlineOs.jobKitUrl}
+              className="hl-btn-secondary flex-1 text-center"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Job kit (after login)
+            </a>
+          </div>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-[var(--ink-muted)]">
+            <li>Today queue — ranked dials for your vertical</li>
+            <li>Job kit — ICP, scripts, products, first-week plan</li>
+            <li>Playbook — channel hierarchy + daily cadence</li>
+          </ul>
+        </section>
       )}
 
       {/* Setup */}
@@ -219,7 +266,7 @@ export function PortalClient({
   );
 }
 
-function primaryAction(data: PortalData): { href: string; label: string } | null {
+function primaryAction(data: PortalData): { href: string; label: string; external?: boolean } | null {
   const s = data.pipelineStatus;
   if (s === "hm_invited" || s === "hm_in_progress") {
     if (data.hmInterviewId)
@@ -252,6 +299,13 @@ function primaryAction(data: PortalData): { href: string; label: string } | null
     };
   }
   if (s === "production_ready") {
+    if (data.hearthlineOs?.loginUrl) {
+      return {
+        href: data.hearthlineOs.loginUrl,
+        label: "Open Hearthline OS (your queue) →",
+        external: true as const,
+      };
+    }
     return null;
   }
   if (s === "applied" || s === "screening_in_progress") {

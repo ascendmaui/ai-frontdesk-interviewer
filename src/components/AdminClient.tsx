@@ -456,6 +456,13 @@ export function AdminClient() {
               </button>
             ))}
           </div>
+          <p className="text-xs leading-relaxed text-[var(--ink-faint)]">
+            <strong className="text-[var(--ink-soft)]">AUTO vs MANUAL OS provision:</strong>{" "}
+            AUTO fires when training completes (quiz + modules + practice pitch) or practice pitch
+            complete sets <code>production_ready</code> — no button needed. MANUAL buttons re-run
+            provision with lead reassignment. Candidate then signs into Hearthline OS with the same
+            Google email.
+          </p>
           {msg && (
             <p
               className={`text-sm ${
