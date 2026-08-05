@@ -432,8 +432,9 @@ export function AdminClient() {
                 ["send_offer", "Create offer"],
                 ["force_onboarding", "Start onboarding"],
                 ["unlock_training", "Unlock training"],
-                ["production_ready", "Mark production ready"],
-                ["provision_hearthline", "Provision → Hearthline OS"],
+                ["production_ready", "MANUAL · Mark production ready (+ OS provision)"],
+                ["provision_hearthline", "MANUAL · Provision → Hearthline OS"],
+                // AUTO: training complete / practice pitch pass (no button)
                 ["reject", "Reject"],
               ] as const
             ).map(([act, label]) => (

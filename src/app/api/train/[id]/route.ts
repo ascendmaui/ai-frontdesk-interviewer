@@ -142,7 +142,7 @@ export async function POST(
     let hearthlineProvision = null;
     if (pipelineStatus === "production_ready") {
       const latest = (await getInterview(id)) || root;
-      hearthlineProvision = await provisionToHearthlineOs(latest);
+      hearthlineProvision = await provisionToHearthlineOs(latest, { trigger: "auto_training_complete" });
     }
     return NextResponse.json({
       ok: true,

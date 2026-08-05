@@ -287,7 +287,7 @@ export async function POST(req: Request) {
       rootAfter.pipelineStatus === "production_ready" ||
       pipelineStatus === "production_ready"
     ) {
-      hearthlineProvision = await provisionToHearthlineOs(rootAfter);
+      hearthlineProvision = await provisionToHearthlineOs(rootAfter, { trigger: "auto_practice_pitch_complete" });
     }
 
     return NextResponse.json({

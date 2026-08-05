@@ -229,6 +229,7 @@ export async function POST(req: Request) {
     const updated = (await getInterview(rootId))!;
     const hearthlineProvision = await provisionToHearthlineOs(updated, {
       reassignLeads: true,
+      trigger: "manual_mark_production_ready",
     });
     return NextResponse.json({
       ok: true,
@@ -242,6 +243,7 @@ export async function POST(req: Request) {
     const updated = (await getInterview(rootId))!;
     const hearthlineProvision = await provisionToHearthlineOs(updated, {
       reassignLeads: true,
+      trigger: "manual_provision_button",
     });
     return NextResponse.json({
       ok: true,

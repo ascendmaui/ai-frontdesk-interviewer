@@ -40,7 +40,7 @@ function provisionSecret(): string | undefined {
 /** Fire-and-log provision; never throws to hiring pipeline. */
 export async function provisionToHearthlineOs(
   root: InterviewRecord,
-  opts?: { reassignLeads?: boolean },
+  opts?: { reassignLeads?: boolean; trigger?: string },
 ): Promise<ProvisionResponse> {
   const secret = provisionSecret();
   if (!secret) {
@@ -64,6 +64,7 @@ export async function provisionToHearthlineOs(
     applicationId: root.rootId || root.id,
     source: "ai-frontdesk-interviewer",
     reassignLeads: Boolean(opts?.reassignLeads),
+    trigger: opts?.trigger,
   };
 
   try {
@@ -97,4 +98,12 @@ export async function provisionToHearthlineOs(
 
 export function shouldProvisionOnStatus(status: string): boolean {
   return status === "production_ready";
+}
+
+
+export function describeProvisionMode(trigger?: string): "auto" | "manual" | "unknown" {
+  if (!trigger) return "unknown";
+  if (trigger.startsWith("auto_")) return "auto";
+  if (trigger.startsWith("manual_")) return "manual";
+  return "unknown";
 }
