@@ -87,52 +87,56 @@ async function ghGetFile(): Promise<{ data: StoreShape; sha?: string }> {
 
 async function ghPutFile(data: StoreShape, sha?: string) {
   const token = ghToken()!;
-  // Ensure branch exists (best-effort)
   await ensureDataBranch(token);
 
   const url = `https://api.github.com/repos/${GH_REPO}/contents/${GH_PATH}`;
-  const body: Record<string, string> = {
-    message: `chore(store): update interviews ${new Date().toISOString()}`,
-    content: Buffer.from(JSON.stringify(data, null, 2), "utf8").toString(
-      "base64",
-    ),
-    branch: GH_BRANCH,
-  };
-  if (sha) body.sha = sha;
+  const content = Buffer.from(JSON.stringify(data, null, 2), "utf8").toString(
+    "base64",
+  );
 
-  const r = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) {
-    const t = await r.text();
-    // retry once without sha if conflict / missing
+  let attemptSha = sha;
+  let lastErr = "";
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const body: Record<string, string> = {
+      message: `chore(store): update interviews ${new Date().toISOString()}`,
+      content,
+      branch: GH_BRANCH,
+    };
+    if (attemptSha) body.sha = attemptSha;
+
+    const r = await fetch(url, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (r.ok) return;
+
+    lastErr = await r.text();
+    // 409/422 = SHA race — re-read latest and retry
     if (r.status === 409 || r.status === 422) {
-      const again = await fetch(url, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-          "Content-Type": "application/json",
-          "X-GitHub-Api-Version": "2022-11-28",
-        },
-        body: JSON.stringify({
-          message: body.message,
-          content: body.content,
-          branch: GH_BRANCH,
-          ...(sha ? {} : {}),
-        }),
-      });
-      if (again.ok) return;
+      await new Promise((res) => setTimeout(res, 80 * (attempt + 1)));
+      const latest = await ghGetFile().catch(() => ({
+        data: { interviews: [] as InterviewRecord[] },
+        sha: undefined as string | undefined,
+      }));
+      // Prefer our write for full replace of store file; use latest sha only
+      attemptSha = latest.sha;
+      continue;
     }
-    throw new Error(`GitHub store write failed: ${r.status} ${t.slice(0, 200)}`);
+    throw new Error(
+      `GitHub store write failed: ${r.status} ${lastErr.slice(0, 200)}`,
+    );
   }
+  throw new Error(
+    `GitHub store write failed after retries: ${lastErr.slice(0, 200)}`,
+  );
 }
 
 async function ensureDataBranch(token: string) {
@@ -186,8 +190,23 @@ async function readAll(): Promise<StoreShape> {
 
 async function writeAll(data: StoreShape) {
   if (useGitHub()) {
-    const { sha } = await ghGetFile().catch(() => ({ sha: undefined }));
-    await ghPutFile(data, sha);
+    // Soft-fail store races should not kill the interview session after retries
+    try {
+      const { sha } = await ghGetFile().catch(() => ({
+        sha: undefined as string | undefined,
+      }));
+      await ghPutFile(data, sha);
+    } catch (e) {
+      console.error("[store] GitHub write failed", e);
+      // Last resort: try write without throwing to caller when possible
+      try {
+        const latest = await ghGetFile();
+        await ghPutFile(data, latest.sha);
+      } catch (e2) {
+        console.error("[store] GitHub write retry failed", e2);
+        throw e2;
+      }
+    }
     return;
   }
   await writeLocal(data);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { voiceForKind } from "@/lib/agent-voices";
 import { getRole } from "@/lib/roles";
 import { getInterview } from "@/lib/store";
 
@@ -6,7 +7,7 @@ export const runtime = "nodejs";
 
 /**
  * Public candidate-facing interview status.
- * Never returns scorecard, transcript, multitask, or pipeline decisions.
+ * Omits scores/transcripts; includes agent identity for correct UI.
  */
 export async function GET(
   _req: Request,
@@ -20,22 +21,38 @@ export async function GET(
 
   const role = getRole(interview.roleSlug);
   const kind = interview.kind || "screening";
+  const profile = voiceForKind(kind);
   const isDone =
     interview.status === "completed" ||
     interview.status === "abandoned" ||
     Boolean(interview.scorecard);
 
+  const rootId = interview.rootId || interview.id;
+  const root =
+    rootId !== interview.id ? await getInterview(rootId) : interview;
+
   return NextResponse.json({
     id: interview.id,
+    rootId,
     kind,
+    agentName: profile.agentName,
+    agentTone: profile.tone,
+    agentTitle: profile.title,
+    voice: profile.voice,
+    roleSlug: interview.roleSlug,
     roleTitle: role?.title,
     roleEmoji: role?.emoji,
     status: interview.status,
     isDone,
+    pipelineStatus: root?.pipelineStatus || interview.pipelineStatus,
+    portalToken: root?.portalToken || interview.portalToken,
+    hmInterviewId: root?.hmInterviewId || interview.hmInterviewId,
+    onboardingInterviewId:
+      root?.onboardingInterviewId || interview.onboardingInterviewId,
+    offerToken: root?.offer?.token || interview.offer?.token,
     candidate: {
       firstName: interview.candidate.firstName,
       lastName: interview.candidate.lastName,
     },
-    // Explicitly omit: scorecard, transcript, multitask, offer, pipeline, notifications
   });
 }

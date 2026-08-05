@@ -1,38 +1,66 @@
-import { InterviewRoom } from "@/components/InterviewRoom";
-import { Shell } from "@/components/Shell";
-import { COMPANY } from "@/lib/company";
+"use client";
 
-export default async function InterviewPage({
+import { useEffect, useState } from "react";
+import { CandidateShell } from "@/components/CandidateShell";
+import { InterviewRoom } from "@/components/InterviewRoom";
+import type { ProcessStepId } from "@/lib/process-steps";
+
+export default function InterviewPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  return (
-    <Shell bare>
-      <div className="mx-auto max-w-lg pt-[max(0.5rem,env(safe-area-inset-top))] sm:max-w-xl">
-        <div className="mb-5 flex items-center gap-2.5 px-0.5">
-          <span
-            className="inline-block h-7 w-7 shrink-0 rounded-full"
-            style={{
-              background:
-                "radial-gradient(circle at 32% 30%, #E1906B, #BA5B33 70%)",
-              boxShadow:
-                "inset 0 0 0 1px rgba(255,255,255,.35), 0 4px 12px rgba(186,91,51,.35)",
-            }}
-            aria-hidden
-          />
-          <div>
-            <p className="hl-serif text-[1.15rem] leading-none text-[var(--ink)]">
-              {COMPANY.product}
-            </p>
-            <p className="mt-0.5 text-[11px] text-[var(--ink-faint)]">
-              Live interview
-            </p>
-          </div>
-        </div>
-        <InterviewRoom interviewId={id} />
+  const [id, setId] = useState("");
+  const [meta, setMeta] = useState<{
+    kind?: string;
+    rootId?: string;
+    portalToken?: string;
+    pipelineStatus?: string;
+    hmInterviewId?: string;
+    onboardingInterviewId?: string;
+    offerToken?: string;
+    roleSlug?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    void params.then((p) => {
+      setId(p.id);
+      fetch(`/api/interview/${p.id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.error) setMeta(d);
+        })
+        .catch(() => null);
+    });
+  }, [params]);
+
+  if (!id) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)]">
+        <div className="animate-spin-accent h-8 w-8 rounded-full border-2 border-[rgba(186,91,51,0.2)] border-t-[var(--accent)]" />
       </div>
-    </Shell>
+    );
+  }
+
+  const kind = meta?.kind || "screening";
+  const activePage: ProcessStepId =
+    kind === "hiring_manager"
+      ? "hiring_manager"
+      : kind === "onboarding"
+        ? "onboarding"
+        : kind === "practice_pitch"
+          ? "training"
+          : "screening";
+
+  return (
+    <CandidateShell
+      bare
+      applicationId={meta?.rootId || id}
+      token={meta?.portalToken}
+      activePage={activePage}
+      activeKind={kind}
+    >
+      <InterviewRoom interviewId={id} />
+    </CandidateShell>
   );
 }

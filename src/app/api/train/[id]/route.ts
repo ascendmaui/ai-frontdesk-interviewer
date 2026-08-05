@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  CORE_MODULES,
+  getAcademyForRole,
   PITCH_PASS,
-  QUIZ,
   QUIZ_PASS,
 } from "@/lib/training-content";
 import {
@@ -30,18 +29,37 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const academy = getAcademyForRole(root.roleSlug);
+
   return NextResponse.json({
-    modules: CORE_MODULES.map(({ id, title, minutes, body }) => ({
+    academy: {
+      title: academy.title,
+      industry: academy.industry,
+      tagline: academy.tagline,
+      processSteps: academy.processSteps,
+      talkTracks: academy.talkTracks,
+      objections: academy.objections,
+    },
+    modules: academy.modules.map(({ id, title, minutes, body }) => ({
       id,
       title,
       minutes,
       body,
     })),
-    quiz: QUIZ.map(({ id, prompt, options }) => ({ id, prompt, options })),
+    quiz: academy.quiz.map(({ id, prompt, options }) => ({
+      id,
+      prompt,
+      options,
+    })),
     training: root.training || { modulesRead: [], quizAttempts: 0 },
     roleSlug: root.roleSlug,
     passMark: Math.round(QUIZ_PASS * 100),
     pitchPass: PITCH_PASS,
+    pipelineStatus: root.pipelineStatus,
+    portalToken: root.portalToken,
+    hmInterviewId: root.hmInterviewId,
+    onboardingInterviewId: root.onboardingInterviewId,
+    offerToken: root.offer?.token,
   });
 }
 
@@ -69,6 +87,8 @@ export async function POST(
   if (body.token && root.portalToken !== body.token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const academy = getAcademyForRole(root.roleSlug);
 
   const training = {
     modulesRead: [...(root.training?.modulesRead || [])],
@@ -98,10 +118,10 @@ export async function POST(
 
   if (body.action === "submit_quiz" && body.answers) {
     let correct = 0;
-    for (const q of QUIZ) {
+    for (const q of academy.quiz) {
       if (body.answers[q.id] === q.correctIndex) correct += 1;
     }
-    const score = correct / QUIZ.length;
+    const score = correct / academy.quiz.length;
     training.quizAttempts += 1;
     training.quizScore = Math.round(score * 100);
     training.quizPassed = score >= QUIZ_PASS;
@@ -128,7 +148,7 @@ export async function POST(
       ok: true,
       training,
       correct,
-      total: QUIZ.length,
+      total: academy.quiz.length,
       passed: training.quizPassed,
       pipelineStatus,
       hearthlineProvision,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildAgentInstructions } from "@/lib/agents";
+import { voiceForKind } from "@/lib/agent-voices";
 import {
   buildInterviewerInstructions,
   getRole,
@@ -54,16 +55,12 @@ export async function POST(req: Request) {
   }
 
   const kind = interview.kind || "screening";
+  const voiceProfile = voiceForKind(kind);
   let instructions: string;
   let greeting: string;
   let agentName: string;
-  let voice =
-    process.env.XAI_VOICE ||
-    (kind === "hiring_manager"
-      ? "sal"
-      : kind === "onboarding"
-        ? "ara"
-        : "eve");
+  // Per-agent voices — never force one global XAI_VOICE onto every role
+  let voice = voiceProfile.voice;
 
   if (kind === "screening") {
     instructions = buildInterviewerInstructions(role, {
@@ -72,7 +69,6 @@ export async function POST(req: Request) {
       yearsInSales: interview.candidate.yearsInSales,
       industryExperience: interview.candidate.industryExperience,
     });
-    // Multitask note in prompt
     instructions += `
 
 ## Multitasking pop-ups
@@ -80,7 +76,7 @@ During this interview the CANDIDATE will see Yes/No questions appear on their sc
 Do NOT stop the interview for those pop-ups. If they mention the pop-ups, acknowledge briefly ("Yep — keep talking, those are intentional multitask checks") and continue.
 Do not read the pop-up questions aloud.`;
     greeting = greetingForRole(role, interview.candidate.firstName);
-    agentName = "Jordan";
+    agentName = voiceProfile.agentName;
   } else {
     const agent = buildAgentInstructions(kind, interview.roleSlug, {
       firstName: interview.candidate.firstName,
@@ -91,7 +87,7 @@ Do not read the pop-up questions aloud.`;
     instructions = agent.instructions;
     greeting = agent.greeting;
     agentName = agent.agentName;
-    if (!process.env.XAI_VOICE) voice = agent.voiceHint;
+    voice = agent.voiceHint || voiceProfile.voice;
   }
 
   const model = process.env.XAI_VOICE_MODEL || "grok-voice-latest";
@@ -139,15 +135,18 @@ Do not read the pop-up questions aloud.`;
             ? "training_in_progress"
             : "screening_in_progress";
 
-    await updateInterview(interviewId, {
-      status: "in_progress",
-      pipelineStatus,
-      startedAt: interview.startedAt || new Date().toISOString(),
-    });
-
-    // Mirror pipeline on root if child
-    if (interview.rootId && interview.rootId !== interviewId) {
-      await updateInterview(interview.rootId, { pipelineStatus });
+    // Persist status — never fail the voice session if store races
+    try {
+      await updateInterview(interviewId, {
+        status: "in_progress",
+        pipelineStatus,
+        startedAt: interview.startedAt || new Date().toISOString(),
+      });
+      if (interview.rootId && interview.rootId !== interviewId) {
+        await updateInterview(interview.rootId, { pipelineStatus });
+      }
+    } catch (storeErr) {
+      console.error("[session] status save failed (continuing)", storeErr);
     }
 
     return NextResponse.json({
@@ -159,6 +158,7 @@ Do not read the pop-up questions aloud.`;
       keyterms,
       kind,
       agentName,
+      agentTone: voiceProfile.tone,
       enableMultitaskQuiz: kind === "screening",
       roleSlug: role.slug,
       roleTitle: role.title,

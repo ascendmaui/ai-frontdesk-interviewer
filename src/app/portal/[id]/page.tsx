@@ -1,5 +1,5 @@
+import { CandidateShell } from "@/components/CandidateShell";
 import { PortalClient } from "@/components/PortalClient";
-import { Shell } from "@/components/Shell";
 
 export default async function PortalPage({
   params,
@@ -11,8 +11,12 @@ export default async function PortalPage({
   const { id } = await params;
   const { t } = await searchParams;
   return (
-    <Shell>
+    <CandidateShell
+      applicationId={id}
+      token={t || ""}
+      activePage="setup"
+    >
       <PortalClient id={id} token={t || ""} />
-    </Shell>
+    </CandidateShell>
   );
 }

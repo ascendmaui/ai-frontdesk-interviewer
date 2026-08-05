@@ -1,3 +1,4 @@
+import { voiceForKind } from "./agent-voices";
 import { COMPANY, PRODUCT_KNOWLEDGE } from "./company";
 import { getRole } from "./roles";
 import type { InterviewKind } from "./types";
@@ -15,9 +16,10 @@ export function buildAgentInstructions(
   const role = getRole(roleSlug);
   const first = candidate.firstName || "there";
   const full = `${candidate.firstName} ${candidate.lastName}`.trim();
+  const profile = voiceForKind(kind);
 
   if (kind === "hiring_manager") {
-    const agentName = "Morgan";
+    const agentName = profile.agentName;
     const instructions = `
 You are **Morgan**, Head of Sales / hiring manager at ${COMPANY.brand} (${COMPANY.product}).
 You are running a final VOICE hiring interview for candidates who already passed the screening with Jordan.
@@ -47,12 +49,17 @@ Vertical focus: ${role?.icp || "local businesses"}. Pain themes: ${(role?.painPo
 
 When done, clearly say the hiring manager interview is complete.
 `.trim();
-    const greeting = `Hi ${first}, this is Morgan, hiring manager for sales at ${COMPANY.product}. Congrats on making it past screening — let's dig into how you'd actually run the seat.`;
-    return { instructions, greeting, agentName, voiceHint: "sal" };
+    const greeting = `Hi ${first}, this is ${agentName}, hiring manager for sales at ${COMPANY.product}. Congrats on making it past screening — let's dig into how you'd actually run the seat.`;
+    return {
+      instructions,
+      greeting,
+      agentName,
+      voiceHint: profile.voice,
+    };
   }
 
   if (kind === "onboarding") {
-    const agentName = "Riley";
+    const agentName = profile.agentName;
     const slackInvite =
       process.env.ONBOARDING_SLACK_INVITE_URL ||
       "the Slack invite link in your welcome email";
@@ -86,39 +93,53 @@ Seat: ${role?.title || "Sales Closer"}
 Do not invent passwords or private keys. If something isn't provisioned yet, tell them ops will email within 1 business day.
 When finished, clearly say onboarding guidance is complete.
 `.trim();
-    const greeting = `Hey ${first}, welcome aboard — I'm Riley, your onboarding guide at ${COMPANY.product}. I'll walk you through Slack, tools, and your first 48 hours. Ready?`;
-    return { instructions, greeting, agentName, voiceHint: "ara" };
+    const greeting = `Hey ${first}, welcome aboard — I'm ${agentName}, your onboarding guide at ${COMPANY.product}. I'll walk you through Slack, tools, and your first 48 hours. Ready?`;
+    return {
+      instructions,
+      greeting,
+      agentName,
+      voiceHint: profile.voice,
+    };
   }
 
   if (kind === "practice_pitch") {
-    const agentName = "Coach";
+    const agentName = profile.agentName;
     const rp = role?.rolePlay;
     const instructions = `
-You are **Coach**, a sales trainer at ${COMPANY.brand}. Run a PRACTICE PITCH session.
+You are **${agentName}**, a sales trainer at ${COMPANY.brand}. Run a PRACTICE PITCH for the **${role?.title}** seat.
 
 Candidate: ${full}
 Role: ${role?.title}
 ICP: ${role?.icp}
+Industry pains: ${(role?.painPoints || []).join("; ")}
 
 ## Format (~8–10 min)
-1. Brief them: they are the closer; you will play a skeptical owner.
+1. Brief them: they are the closer; you will play a skeptical owner in this vertical.
 2. Break into character as **${rp?.characterName || "the owner"}** of **${rp?.business || "a local business"}**. Personality: ${rp?.personality || "busy and skeptical"}.
 3. Let them run discovery → value → close for a next step. Push back with: ${(rp?.objections || ["too expensive", "I have staff"]).join("; ")}.
-4. After ~5–7 minutes break character, give crisp coaching: 2 strengths, 1 fix.
+4. After ~5–7 minutes break character, give crisp coaching: 2 strengths, 1 fix — specific to ${role?.shortLabel || "this"} selling.
 5. End clearly: "Practice pitch complete."
 
 ${PRODUCT_KNOWLEDGE}
 Keep turns short for voice.
 `.trim();
-    const greeting = `Hey ${first}, I'm Coach. We'll do a live practice pitch for ${role?.shortLabel || "your"} vertical — you'll sell, I'll play the owner. Ready when you are.`;
-    return { instructions, greeting, agentName, voiceHint: "rex" };
+    const greeting = `Hey ${first}, I'm ${agentName}. We'll do a live practice pitch for ${role?.shortLabel || "your"} — you'll sell, I'll play the owner. Ready when you are.`;
+    return {
+      instructions,
+      greeting,
+      agentName,
+      voiceHint: profile.voice,
+    };
   }
 
-  // screening — Jordan (delegated details live in roles.ts typically)
-  const agentName = "Jordan";
-  const instructions = ""; // filled by roles.buildInterviewerInstructions
-  const greeting = `Hi ${first}, welcome to your ${role?.title || "sales"} interview.`;
-  return { instructions, greeting, agentName, voiceHint: "eve" };
+  // screening — Jordan
+  const screening = voiceForKind("screening");
+  return {
+    instructions: "",
+    greeting: `Hi ${first}, welcome to your ${role?.title || "sales"} interview.`,
+    agentName: screening.agentName,
+    voiceHint: screening.voice,
+  };
 }
 
 export function evaluateSystemForKind(kind: InterviewKind, roleTitle: string): string {

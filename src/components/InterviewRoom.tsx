@@ -23,6 +23,8 @@ type Meta = {
   roleSlug?: string;
   kind?: string;
   agentName?: string;
+  agentTone?: string;
+  voice?: string;
   candidate?: { firstName?: string; lastName?: string };
   status?: string;
   enableMultitaskQuiz?: boolean;
@@ -82,8 +84,17 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     }
   }, [interviewId]);
 
-  const agentName = meta?.agentName || "Jordan";
-  const isScreening = (meta?.kind || "screening") === "screening";
+  const kind = meta?.kind || "screening";
+  const agentName =
+    meta?.agentName ||
+    (kind === "hiring_manager"
+      ? "Morgan"
+      : kind === "onboarding"
+        ? "Riley"
+        : kind === "practice_pitch"
+          ? "Coach"
+          : "Jordan");
+  const isScreening = kind === "screening";
 
   useEffect(() => {
     transcriptRef.current = transcript;
@@ -318,15 +329,15 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
   const levelPct = Math.min(100, Math.round(level * 400));
 
   const readyCopy = useMemo(() => {
-    const kind = meta?.kind || "screening";
     if (kind === "hiring_manager") {
       return {
-        title: "Hiring manager round",
-        body: `You'll speak with ${agentName} (~10–12 min). Deeper dive on how you'd run the seat day to day.`,
+        title: `Hiring manager round, ${meta?.candidate?.firstName || ""}`.trim(),
+        body: `You'll speak with ${agentName} (~10–12 min) — senior hiring manager voice. Deeper dive on how you'd run the seat day to day.`,
         bullets: [
           "No pop-up quiz this round — focus on the conversation",
           "Be ready to walk through a Monday pipeline plan",
           "Honest answers beat polished scripts",
+          `Voice: ${meta?.agentTone || "decisive, senior"}`,
         ],
       };
     }
@@ -350,7 +361,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         "After you finish, our team reviews and will contact you",
       ],
     };
-  }, [agentName, meta?.kind, meta?.roleTitle]);
+  }, [agentName, kind, meta?.candidate?.firstName, meta?.agentTone, meta?.roleTitle]);
 
   if (phase === "finishing") {
     return (

@@ -1,5 +1,5 @@
+import { CandidateShell } from "@/components/CandidateShell";
 import { TrainClient } from "@/components/TrainClient";
-import { Shell } from "@/components/Shell";
 
 export default async function TrainPage({
   params,
@@ -11,8 +11,12 @@ export default async function TrainPage({
   const { id } = await params;
   const { t } = await searchParams;
   return (
-    <Shell>
+    <CandidateShell
+      applicationId={id}
+      token={t || ""}
+      activePage="training"
+    >
       <TrainClient id={id} token={t || ""} />
-    </Shell>
+    </CandidateShell>
   );
 }
