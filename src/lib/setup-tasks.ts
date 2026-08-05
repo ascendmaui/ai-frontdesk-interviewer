@@ -19,11 +19,22 @@ export function buildSetupTasks(): SetupTask[] {
       required: true,
     },
     {
+      id: "hearthline-os",
+      title: "Sign in to Hearthline OS",
+      description:
+        "Use the same Google email you applied with. After training, your seat unlocks leads + job kit. Open Job kit for scripts, ICP, and your queue.",
+      href:
+        process.env.HEARTHLINE_OS_URL
+          ? `${process.env.HEARTHLINE_OS_URL.replace(/\/$/, "")}/os/login`
+          : "https://hearthline-gold.vercel.app/os/login",
+      required: true,
+    },
+    {
       id: "crm",
       title: "Confirm CRM access",
       description:
         "Log in to CRM and open your pipeline board. If you can't log in, message ops.",
-      href: process.env.ONBOARDING_CRM_URL || undefined,
+      href: process.env.ONBOARDING_CRM_URL || "https://hearthline-gold.vercel.app/os",
       required: true,
     },
     {

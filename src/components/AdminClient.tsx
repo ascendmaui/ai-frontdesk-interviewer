@@ -223,7 +223,13 @@ export function AdminClient() {
         setMsg(`❌ ${j.error || "Action failed"}`);
         return;
       }
-      setMsg(`✓ ${j.message || actionName}`);
+      const prov = j.hearthlineProvision;
+      if (prov?.error) setMsg(`✓ ${j.message || actionName} · OS: ${prov.error}`);
+      else if (prov?.email)
+        setMsg(
+          `✓ ${j.message || actionName} · OS: ${prov.positionTitle} · ${prov.assignedLeads?.length || 0} leads → ${prov.email}`,
+        );
+      else setMsg(`✓ ${j.message || actionName}`);
       if (j.links) setActionLinks(j.links);
       // Prefer returned application id for test user create
       const refreshId = j.id || id;
@@ -427,6 +433,7 @@ export function AdminClient() {
                 ["force_onboarding", "Start onboarding"],
                 ["unlock_training", "Unlock training"],
                 ["production_ready", "Mark production ready"],
+                ["provision_hearthline", "Provision → Hearthline OS"],
                 ["reject", "Reject"],
               ] as const
             ).map(([act, label]) => (

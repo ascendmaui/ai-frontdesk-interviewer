@@ -29,6 +29,7 @@ import type {
   TranscriptLine,
 } from "@/lib/types";
 import { INCOMPLETE_SEC } from "@/lib/types";
+import { provisionToHearthlineOs } from "@/lib/hearthline-os";
 
 export const runtime = "nodejs";
 
@@ -279,12 +280,23 @@ export async function POST(req: Request) {
         (await updateInterview(interviewId, { notifications })) || interview;
     }
 
+    // When training finishes → production_ready, provision into Hearthline OS
+    let hearthlineProvision = null;
+    const rootAfter = (await getInterview(rootId)) || interview;
+    if (
+      rootAfter.pipelineStatus === "production_ready" ||
+      pipelineStatus === "production_ready"
+    ) {
+      hearthlineProvision = await provisionToHearthlineOs(rootAfter);
+    }
+
     return NextResponse.json({
       interview,
       nextSession: childSession
         ? { id: childSession.id, kind: childSession.kind }
         : null,
       offerToken: offer?.token,
+      hearthlineProvision,
       cached: false,
     });
   } catch (e) {

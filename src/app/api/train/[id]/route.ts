@@ -12,6 +12,7 @@ import {
   updateInterview,
 } from "@/lib/store";
 import type { InterviewRecord } from "@/lib/types";
+import { provisionToHearthlineOs } from "@/lib/hearthline-os";
 
 export const runtime = "nodejs";
 
@@ -118,6 +119,11 @@ export async function POST(
     }
 
     await updateInterview(id, { training, pipelineStatus });
+    let hearthlineProvision = null;
+    if (pipelineStatus === "production_ready") {
+      const latest = (await getInterview(id)) || root;
+      hearthlineProvision = await provisionToHearthlineOs(latest);
+    }
     return NextResponse.json({
       ok: true,
       training,
@@ -125,6 +131,7 @@ export async function POST(
       total: QUIZ.length,
       passed: training.quizPassed,
       pipelineStatus,
+      hearthlineProvision,
     });
   }
 

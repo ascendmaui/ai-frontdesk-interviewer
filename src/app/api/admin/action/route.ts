@@ -12,6 +12,7 @@ import {
   updateInterview,
 } from "@/lib/store";
 import type { InterviewKind, InterviewRecord, PipelineStatus } from "@/lib/types";
+import { provisionToHearthlineOs } from "@/lib/hearthline-os";
 
 export const runtime = "nodejs";
 
@@ -225,10 +226,30 @@ export async function POST(req: Request) {
         completedAt: new Date().toISOString(),
       },
     });
+    const updated = (await getInterview(rootId))!;
+    const hearthlineProvision = await provisionToHearthlineOs(updated, {
+      reassignLeads: true,
+    });
     return NextResponse.json({
       ok: true,
       pipelineStatus: "production_ready",
+      hearthlineProvision,
       links: links({ ...app, pipelineStatus: "production_ready" }),
+    });
+  }
+
+  if (action === "provision_hearthline") {
+    const updated = (await getInterview(rootId))!;
+    const hearthlineProvision = await provisionToHearthlineOs(updated, {
+      reassignLeads: true,
+    });
+    return NextResponse.json({
+      ok: true,
+      message: hearthlineProvision.error
+        ? `Provision error: ${hearthlineProvision.error}`
+        : `Provisioned ${hearthlineProvision.email} as ${hearthlineProvision.positionTitle}`,
+      hearthlineProvision,
+      links: links(updated),
     });
   }
 
