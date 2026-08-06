@@ -12,6 +12,7 @@ import {
   updateInterview,
 } from "@/lib/store";
 import type { InterviewKind, InterviewRecord, PipelineStatus } from "@/lib/types";
+import { runProductionReadyEffects } from "@/lib/closer-ready";
 import { provisionToHearthlineOs } from "@/lib/hearthline-os";
 
 export const runtime = "nodejs";
@@ -227,14 +228,15 @@ export async function POST(req: Request) {
       },
     });
     const updated = (await getInterview(rootId))!;
-    const hearthlineProvision = await provisionToHearthlineOs(updated, {
+    const effects = await runProductionReadyEffects(updated, {
       reassignLeads: true,
       trigger: "manual_mark_production_ready",
     });
     return NextResponse.json({
       ok: true,
       pipelineStatus: "production_ready",
-      hearthlineProvision,
+      hearthlineProvision: effects.hearthlineProvision,
+      territory: effects.territory,
       links: links({ ...app, pipelineStatus: "production_ready" }),
     });
   }

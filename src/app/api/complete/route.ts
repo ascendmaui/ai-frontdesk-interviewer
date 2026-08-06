@@ -29,8 +29,7 @@ import type {
   TranscriptLine,
 } from "@/lib/types";
 import { INCOMPLETE_SEC } from "@/lib/types";
-import { provisionToHearthlineOs } from "@/lib/hearthline-os";
-import { activateCloserTerritory } from "@/lib/platform-store";
+import { runProductionReadyEffects } from "@/lib/closer-ready";
 
 export const runtime = "nodejs";
 
@@ -281,8 +280,7 @@ export async function POST(req: Request) {
         (await updateInterview(interviewId, { notifications })) || interview;
     }
 
-    // When training finishes → production_ready, provision into Hearthline OS
-    // and activate area-code territory so marketing leads route to them
+    // When training finishes → production_ready, provision OS + territory
     let hearthlineProvision = null;
     let territory = null;
     const rootAfter = (await getInterview(rootId)) || interview;
@@ -290,20 +288,11 @@ export async function POST(req: Request) {
       rootAfter.pipelineStatus === "production_ready" ||
       pipelineStatus === "production_ready"
     ) {
-      hearthlineProvision = await provisionToHearthlineOs(rootAfter, {
+      const effects = await runProductionReadyEffects(rootAfter, {
         trigger: "auto_practice_pitch_complete",
       });
-      try {
-        territory = await activateCloserTerritory({
-          closerId: rootId,
-          closerName: `${rootAfter.candidate.firstName} ${rootAfter.candidate.lastName}`.trim(),
-          email: rootAfter.candidate.email,
-          phone: rootAfter.candidate.phone,
-          roleSlug: rootAfter.roleSlug,
-        });
-      } catch (e) {
-        console.error("[complete] territory activate failed", e);
-      }
+      hearthlineProvision = effects.hearthlineProvision;
+      territory = effects.territory;
     }
 
     return NextResponse.json({

@@ -5,6 +5,7 @@ import {
   listTerritories,
   upsertTerritory,
 } from "@/lib/platform-store";
+import { portalAuthError } from "@/lib/portal-auth";
 import { getRole } from "@/lib/roles";
 import { setupProgress } from "@/lib/setup-tasks";
 import { getInterview, updateInterview } from "@/lib/store";
@@ -32,8 +33,9 @@ export async function GET(
   const rootId = interview.rootId || interview.id;
   const root = (await getInterview(rootId)) || interview;
 
-  if (t && root.portalToken && t !== root.portalToken) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = portalAuthError(t, root.portalToken);
+  if (auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   const role = getRole(root.roleSlug);
@@ -133,8 +135,9 @@ export async function PATCH(
   if (!root) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (body.token && root.portalToken !== body.token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = portalAuthError(body.token, root.portalToken);
+  if (auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   // Territory self-serve

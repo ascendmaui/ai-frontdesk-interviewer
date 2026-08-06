@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { runProductionReadyEffects } from "@/lib/closer-ready";
+import { portalAuthError } from "@/lib/portal-auth";
 import {
   getAcademyForRole,
   PITCH_PASS,
@@ -11,7 +13,6 @@ import {
   updateInterview,
 } from "@/lib/store";
 import type { InterviewRecord } from "@/lib/types";
-import { provisionToHearthlineOs } from "@/lib/hearthline-os";
 
 export const runtime = "nodejs";
 
@@ -25,8 +26,9 @@ export async function GET(
   if (!root) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (t && root.portalToken !== t) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = portalAuthError(t, root.portalToken);
+  if (auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   const academy = getAcademyForRole(root.roleSlug);
@@ -84,8 +86,9 @@ export async function POST(
   if (!root) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (body.token && root.portalToken !== body.token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = portalAuthError(body.token, root.portalToken);
+  if (auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   const academy = getAcademyForRole(root.roleSlug);
@@ -140,9 +143,14 @@ export async function POST(
 
     await updateInterview(id, { training, pipelineStatus });
     let hearthlineProvision = null;
+    let territory = null;
     if (pipelineStatus === "production_ready") {
       const latest = (await getInterview(id)) || root;
-      hearthlineProvision = await provisionToHearthlineOs(latest, { trigger: "auto_training_complete" });
+      const effects = await runProductionReadyEffects(latest, {
+        trigger: "auto_training_complete",
+      });
+      hearthlineProvision = effects.hearthlineProvision;
+      territory = effects.territory;
     }
     return NextResponse.json({
       ok: true,
@@ -152,6 +160,7 @@ export async function POST(
       passed: training.quizPassed,
       pipelineStatus,
       hearthlineProvision,
+      territory,
     });
   }
 
