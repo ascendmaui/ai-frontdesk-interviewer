@@ -88,17 +88,15 @@ export function LeadForm() {
         </p>
       </div>
 
-      <div className="hl-card space-y-3 p-5">
+      <div className="hl-card space-y-3 p-5 sm:p-6">
         <label className="block">
-          <span className="text-[12px] font-medium text-[var(--ink-muted)]">
-            Industry
-          </span>
+          <span className="hl-label">Industry</span>
           <select
             value={form.industry}
             onChange={(e) =>
               setForm((f) => ({ ...f, industry: e.target.value }))
             }
-            className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm"
+            className="hl-input"
           >
             {INDUSTRIES.map((i) => (
               <option key={i} value={i}>
@@ -108,85 +106,75 @@ export function LeadForm() {
           </select>
         </label>
         <label className="block">
-          <span className="text-[12px] font-medium text-[var(--ink-muted)]">
-            Business name
-          </span>
+          <span className="hl-label">Business name</span>
           <input
             value={form.businessName}
             onChange={(e) =>
               setForm((f) => ({ ...f, businessName: e.target.value }))
             }
-            className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm"
+            className="hl-input"
           />
         </label>
         <label className="block">
-          <span className="text-[12px] font-medium text-[var(--ink-muted)]">
-            Your name
-          </span>
+          <span className="hl-label">Your name</span>
           <input
             value={form.contactName}
             onChange={(e) =>
               setForm((f) => ({ ...f, contactName: e.target.value }))
             }
-            className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm"
+            className="hl-input"
           />
         </label>
         <label className="block">
-          <span className="text-[12px] font-medium text-[var(--ink-muted)]">
-            Phone *
-          </span>
+          <span className="hl-label">Phone *</span>
           <input
             required
             type="tel"
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm"
+            className="hl-input"
             placeholder="(864) 555-0100"
           />
         </label>
         <label className="block">
-          <span className="text-[12px] font-medium text-[var(--ink-muted)]">
-            Email
-          </span>
+          <span className="hl-label">Email</span>
           <input
             type="email"
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm"
+            className="hl-input"
           />
         </label>
         <label className="block">
-          <span className="text-[12px] font-medium text-[var(--ink-muted)]">
-            State
-          </span>
+          <span className="hl-label">State</span>
           <input
             value={form.state}
             onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-            className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm"
+            className="hl-input"
             placeholder="SC"
             maxLength={2}
           />
         </label>
         <label className="block">
-          <span className="text-[12px] font-medium text-[var(--ink-muted)]">
-            Notes
-          </span>
+          <span className="hl-label">Notes</span>
           <textarea
             value={form.notes}
             onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             rows={3}
-            className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm"
+            className="hl-input min-h-[5rem]"
           />
         </label>
 
         {error && (
-          <p className="text-sm text-[var(--danger)]">{error}</p>
+          <p className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
+            {error}
+          </p>
         )}
 
         <button
           type="submit"
           disabled={busy}
-          className="w-full min-h-12 rounded-[99px] bg-[var(--accent)] text-sm font-semibold text-white disabled:opacity-50"
+          className="hl-btn-primary w-full disabled:opacity-50"
         >
           {busy ? "Sending…" : "Request demo"}
         </button>

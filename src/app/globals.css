@@ -267,3 +267,66 @@ textarea {
   letter-spacing: -0.015em;
   line-height: 1.08;
 }
+
+.hl-empty {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+}
+
+.hl-surface {
+  border-radius: var(--radius-card);
+  background: linear-gradient(
+    165deg,
+    rgba(255, 253, 247, 0.95) 0%,
+    rgba(250, 245, 236, 0.88) 100%
+  );
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.hl-divider {
+  height: 1px;
+  background: var(--line);
+  border: 0;
+  margin: 1.25rem 0;
+}
+
+.hl-link {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.hl-link:hover {
+  color: var(--accent-hover);
+}
+
+/* Premium glass nav strip */
+.hl-nav-strip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+
+.hl-nav-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* Subtle premium focus ring for buttons that use custom classes */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(186, 91, 51, 0.55);
+  outline-offset: 2px;
+}
+
+/* Mobile bottom safe padding for fixed action bars */
+.hl-safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}

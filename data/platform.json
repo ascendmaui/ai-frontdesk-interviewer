@@ -1,0 +1,17 @@
+{
+  "territories": [],
+  "leads": [
+    {
+      "id": "lead_mshixvzx_omm2c",
+      "source": "marketing_form",
+      "industry": "hvac",
+      "roleSlug": "hvac-closer",
+      "businessName": "Smoke HVAC LLC",
+      "contactName": "Smoke Test",
+      "phone": "(864) 555-0199",
+      "areaCode": "864",
+      "status": "unassigned",
+      "createdAt": "2026-08-06T13:00:54.717Z"
+    }
+  ]
+}

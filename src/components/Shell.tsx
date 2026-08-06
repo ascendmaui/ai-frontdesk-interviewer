@@ -40,7 +40,7 @@ export function Shell({
         />
       </div>
 
-      <header className="relative z-20 border-b border-[var(--line)] bg-[rgba(250,245,236,0.78)] pt-[env(safe-area-inset-top)] backdrop-blur-[18px]">
+      <header className="relative z-20 border-b border-[var(--line)] bg-[rgba(250,245,236,0.82)] pt-[env(safe-area-inset-top)] backdrop-blur-[20px]">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3.5 sm:max-w-2xl sm:px-6">
           <Link
             href="/"
@@ -61,7 +61,11 @@ export function Shell({
                 {COMPANY.product}
               </p>
               <p className="mt-0.5 truncate text-[11px] text-[var(--ink-faint)]">
-                {bare ? "Live interview" : "Careers · Your hiring path"}
+                {bare
+                  ? "Secure voice session"
+                  : process
+                    ? "Your hiring path"
+                    : "Careers · Sales closers"}
               </p>
             </div>
           </Link>
@@ -73,7 +77,7 @@ export function Shell({
                   className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
                   style={{ animation: "pulseDot 2.4s infinite" }}
                 />
-                Hiring
+                Live hiring
               </span>
             )}
             {process && <ProcessMenu context={process} />}
@@ -84,6 +88,22 @@ export function Shell({
       <main className="relative z-10 mx-auto max-w-lg px-4 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-5 sm:max-w-2xl sm:px-6 sm:pt-8">
         {children}
       </main>
+
+      <footer className="relative z-10 border-t border-[var(--line)] bg-[rgba(241,234,220,0.45)]">
+        <div className="mx-auto flex max-w-lg flex-col gap-2 px-4 py-5 text-center sm:max-w-2xl sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:text-left">
+          <p className="text-[11px] text-[var(--ink-faint)]">
+            © {new Date().getFullYear()} {COMPANY.brand} · AI Front Desk
+          </p>
+          <div className="flex justify-center gap-4 text-[12px]">
+            <Link href="/" className="hl-link">
+              Careers
+            </Link>
+            <Link href="/leads" className="hl-link">
+              Demo for businesses
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

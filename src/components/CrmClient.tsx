@@ -216,13 +216,16 @@ export function CrmClient() {
       {tab === "leads" && (
         <section className="space-y-3">
           {!leads.length && (
-            <p className="text-sm text-[var(--ink-muted)]">
-              No leads yet. Use the public form at{" "}
-              <a href="/leads" className="text-[var(--accent)]">
-                /leads
-              </a>
-              .
-            </p>
+            <div className="hl-empty">
+              <p className="font-semibold text-[var(--ink)]">No leads yet</p>
+              <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                Marketing intake is live at{" "}
+                <a href="/leads" className="hl-link">
+                  /leads
+                </a>
+                . Submit a demo request to populate this board.
+              </p>
+            </div>
           )}
           {leads.map((lead) => (
             <article key={lead.id} className="hl-card p-4">

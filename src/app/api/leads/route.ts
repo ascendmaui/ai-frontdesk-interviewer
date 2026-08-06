@@ -1,12 +1,27 @@
 import { NextResponse } from "next/server";
 import { adminAuthError } from "@/lib/admin-auth";
 import { createLead, listLeads, updateLeadStatus } from "@/lib/platform-store";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { postSlackChannel } from "@/lib/slack-config";
-
 export const runtime = "nodejs";
 
 /** Public marketing lead intake (no admin auth). */
 export async function POST(req: Request) {
+  const ip = clientIp(req);
+  const limited = rateLimit(`leads:${ip}`, { limit: 12, windowMs: 60_000 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      {
+        error: "Too many requests — try again shortly",
+        retryAfterSec: limited.retryAfterSec,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limited.retryAfterSec) },
+      },
+    );
+  }
+
   let body: {
     industry?: string;
     phone?: string;
@@ -27,14 +42,28 @@ export async function POST(req: Request) {
 
   const phone = String(body.phone || "").trim();
   const industry = String(body.industry || "").trim().toLowerCase();
-  if (!phone || phone.replace(/\D/g, "").length < 10) {
+  const digits = phone.replace(/\D/g, "");
+  if (!phone || digits.length < 10 || digits.length > 15) {
     return NextResponse.json(
-      { error: "Valid phone number required" },
+      { error: "Valid phone number required (10+ digits)" },
       { status: 400 },
     );
   }
   if (!industry) {
     return NextResponse.json({ error: "industry is required" }, { status: 400 });
+  }
+  if (
+    body.email &&
+    body.email.trim() &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())
+  ) {
+    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+  }
+  if (body.notes && String(body.notes).length > 2000) {
+    return NextResponse.json(
+      { error: "Notes too long (max 2000 chars)" },
+      { status: 400 },
+    );
   }
 
   try {

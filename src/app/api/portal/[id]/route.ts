@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { COMPANY } from "@/lib/company";
 import { pipelineSteps } from "@/lib/pipeline";
+import {
+  listTerritories,
+  upsertTerritory,
+} from "@/lib/platform-store";
 import { getRole } from "@/lib/roles";
 import { setupProgress } from "@/lib/setup-tasks";
 import { getInterview, updateInterview } from "@/lib/store";
+import {
+  AREA_CODE_REGIONS,
+  extractAreaCode,
+} from "@/lib/territories";
 
 export const runtime = "nodejs";
 
@@ -37,6 +45,11 @@ export async function GET(
     "https://hearthline-gold.vercel.app"
   ).replace(/\/$/, "");
 
+  const territories = await listTerritories().catch(() => []);
+  const myTerritory = territories.find((x) => x.closerId === root.id) || null;
+  const phoneNpa = extractAreaCode(root.candidate.phone || "");
+
+  // Candidate-safe: never expose scores / multitask / hire verdicts
   return NextResponse.json({
     id: root.id,
     portalToken: root.portalToken,
@@ -58,6 +71,7 @@ export async function GET(
       firstName: root.candidate.firstName,
       lastName: root.candidate.lastName,
       email: root.candidate.email,
+      phone: root.candidate.phone,
     },
     hmInterviewId: root.hmInterviewId,
     onboardingInterviewId: root.onboardingInterviewId,
@@ -70,16 +84,29 @@ export async function GET(
       : null,
     setupTasks: root.setupTasks || [],
     setupProgress: progress,
-    training: root.training || { modulesRead: [], quizAttempts: 0 },
+    training: {
+      modulesRead: root.training?.modulesRead || [],
+      quizPassed: root.training?.quizPassed,
+      practicePitchPassed: root.training?.practicePitchPassed,
+    },
     calendarUrl: COMPANY.calendarUrl || null,
-    screeningScore: root.scorecard?.overallScore,
-    multitask: root.multitaskQuiz
+    territory: myTerritory
       ? {
-          score: root.multitaskQuiz.multitaskScore,
-          correct: root.multitaskQuiz.correctCount,
-          scored: root.multitaskQuiz.scoredCount,
+          areaCodes: myTerritory.areaCodes,
+          states: myTerritory.states,
+          active: myTerritory.active,
         }
       : null,
+    suggestedAreaCode: phoneNpa || null,
+    areaCodeOptions: AREA_CODE_REGIONS.slice(0, 80),
+    canEditTerritory: [
+      "setup_in_progress",
+      "setup_complete",
+      "training_in_progress",
+      "training_complete",
+      "production_ready",
+      "onboarding_complete",
+    ].includes(root.pipelineStatus),
   });
 }
 
@@ -88,7 +115,14 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  let body: { token?: string; taskId?: string; complete?: boolean } = {};
+  let body: {
+    token?: string;
+    taskId?: string;
+    complete?: boolean;
+    action?: string;
+    areaCodes?: string[];
+    states?: string[];
+  } = {};
   try {
     body = await req.json();
   } catch {
@@ -101,6 +135,71 @@ export async function PATCH(
   }
   if (body.token && root.portalToken !== body.token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Territory self-serve
+  if (body.action === "save_territory") {
+    const allowed = [
+      "setup_in_progress",
+      "setup_complete",
+      "training_in_progress",
+      "training_complete",
+      "production_ready",
+      "onboarding_complete",
+    ].includes(root.pipelineStatus);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Territory unlocks after onboarding" },
+        { status: 403 },
+      );
+    }
+    let areaCodes = Array.isArray(body.areaCodes)
+      ? body.areaCodes
+          .map((c) => String(c).replace(/\D/g, "").slice(0, 3))
+          .filter((c) => c.length === 3)
+      : [];
+    const phoneNpa = extractAreaCode(root.candidate.phone || "");
+    if (phoneNpa && !areaCodes.includes(phoneNpa)) {
+      areaCodes = [phoneNpa, ...areaCodes];
+    }
+    if (!areaCodes.length) {
+      return NextResponse.json(
+        { error: "Select at least one area code" },
+        { status: 400 },
+      );
+    }
+    areaCodes = [...new Set(areaCodes)].slice(0, 12);
+    const states = Array.isArray(body.states)
+      ? body.states
+          .map((s) => String(s).toUpperCase().slice(0, 2))
+          .filter(Boolean)
+          .slice(0, 8)
+      : [];
+
+    try {
+      const territory = await upsertTerritory({
+        closerId: root.id,
+        closerName:
+          `${root.candidate.firstName} ${root.candidate.lastName}`.trim(),
+        email: root.candidate.email,
+        phone: root.candidate.phone,
+        roleSlug: root.roleSlug,
+        areaCodes,
+        states,
+        active: true,
+      });
+      return NextResponse.json({
+        ok: true,
+        territory: {
+          areaCodes: territory.areaCodes,
+          states: territory.states,
+          active: territory.active,
+        },
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Save failed";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
   }
 
   if (!body.taskId) {

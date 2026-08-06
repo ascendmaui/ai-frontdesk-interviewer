@@ -14,8 +14,8 @@ export function AdminNav() {
   const path = usePathname() || "/admin";
 
   return (
-    <nav className="mb-6 overflow-x-auto">
-      <div className="flex min-w-max gap-2 border-b border-[var(--line)] pb-3">
+    <nav className="mb-6" aria-label="Admin sections">
+      <div className="hl-nav-strip">
         {LINKS.map((l) => {
           const active =
             l.href === "/admin"
@@ -25,9 +25,9 @@ export function AdminNav() {
             <Link
               key={l.href}
               href={l.href}
-              className={`rounded-2xl border px-3.5 py-2.5 transition ${
+              className={`min-w-[7.5rem] shrink-0 rounded-2xl border px-3.5 py-2.5 transition ${
                 active
-                  ? "border-[var(--accent-border)] bg-[var(--accent-wash)]"
+                  ? "border-[var(--accent-border)] bg-[var(--accent-wash)] shadow-sm"
                   : "border-[var(--line)] bg-white/50 hover:bg-white/80"
               }`}
             >

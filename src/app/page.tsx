@@ -37,6 +37,19 @@ export default function HomePage() {
         ))}
       </div>
 
+      <section className="hl-surface mt-8 p-5 sm:p-6 animate-rise">
+        <p className="hl-eyebrow">Business owners</p>
+        <h2 className="hl-serif mt-1 text-xl text-[var(--ink)] sm:text-2xl">
+          Looking for AI Front Desk for your shop?
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--ink-muted)]">
+          Request a demo — we match you to a local closer by phone area code.
+        </p>
+        <a href="/leads" className="hl-btn-secondary mt-4 inline-flex">
+          Request a demo →
+        </a>
+      </section>
+
       <p className="mt-9 text-center text-[12px] leading-relaxed text-[var(--ink-faint)]">
         Mobile-friendly · Safari, Chrome & Facebook browser · Powered by Grok
         Voice

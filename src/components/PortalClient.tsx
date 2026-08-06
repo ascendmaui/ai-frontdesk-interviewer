@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+type AreaOpt = { code: string; region: string; state: string };
+
 type PortalData = {
   id: string;
   portalToken: string;
@@ -11,7 +13,12 @@ type PortalData = {
   industry?: string;
   pipelineStatus: string;
   steps: { id: string; label: string; state: string }[];
-  candidate: { firstName: string; lastName: string; email: string };
+  candidate: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  };
   hmInterviewId?: string;
   onboardingInterviewId?: string;
   offer?: { token: string; status: string; title: string } | null;
@@ -27,12 +34,9 @@ type PortalData = {
   training: {
     modulesRead: string[];
     quizPassed?: boolean;
-    quizScore?: number;
     practicePitchPassed?: boolean;
-    practicePitchScore?: number;
   };
   calendarUrl?: string | null;
-  multitask?: { score: number; correct: number; scored: number } | null;
   hearthlineOs?: {
     loginUrl: string;
     jobKitUrl: string;
@@ -40,6 +44,10 @@ type PortalData = {
     playbookUrl: string;
     note: string;
   };
+  territory?: { areaCodes: string[]; states: string[]; active: boolean } | null;
+  suggestedAreaCode?: string | null;
+  areaCodeOptions?: AreaOpt[];
+  canEditTerritory?: boolean;
   error?: string;
 };
 
@@ -52,13 +60,27 @@ export function PortalClient({
 }) {
   const [data, setData] = useState<PortalData | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [states, setStates] = useState("");
+  const [terrMsg, setTerrMsg] = useState<string | null>(null);
+  const [terrBusy, setTerrBusy] = useState(false);
 
   const load = useCallback(() => {
     fetch(`/api/portal/${id}?t=${encodeURIComponent(token)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setErr(d.error);
-        else setData(d);
+        else {
+          setData(d);
+          const codes =
+            d.territory?.areaCodes?.length
+              ? d.territory.areaCodes
+              : d.suggestedAreaCode
+                ? [d.suggestedAreaCode]
+                : [];
+          setSelectedCodes(codes);
+          setStates((d.territory?.states || []).join(", "));
+        }
       })
       .catch(() => setErr("Could not load portal"));
   }, [id, token]);
@@ -76,22 +98,65 @@ export function PortalClient({
     if (res.ok) load();
   }
 
+  async function saveTerritory() {
+    setTerrBusy(true);
+    setTerrMsg(null);
+    try {
+      const res = await fetch(`/api/portal/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          action: "save_territory",
+          areaCodes: selectedCodes,
+          states: states
+            .split(/[,\s]+/)
+            .map((s) => s.trim().toUpperCase())
+            .filter(Boolean),
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Save failed");
+      setTerrMsg(
+        `Territory saved · NPAs ${j.territory.areaCodes.join(", ")}`,
+      );
+      load();
+    } catch (e) {
+      setTerrMsg(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setTerrBusy(false);
+    }
+  }
+
+  function toggleCode(code: string) {
+    setSelectedCodes((prev) =>
+      prev.includes(code)
+        ? prev.filter((c) => c !== code)
+        : prev.length >= 12
+          ? prev
+          : [...prev, code],
+    );
+  }
+
   if (err) {
     return (
-      <p className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-bg)] p-4 text-[var(--danger)]">
-        {err}
-      </p>
+      <div className="hl-empty border-[var(--danger-border)] bg-[var(--danger-bg)]">
+        <p className="font-semibold text-[var(--danger)]">Portal unavailable</p>
+        <p className="mt-1 text-sm text-[var(--danger)]">{err}</p>
+      </div>
     );
   }
   if (!data) {
     return (
-      <div className="flex min-h-[40dvh] items-center justify-center">
+      <div className="flex min-h-[40dvh] flex-col items-center justify-center gap-3">
         <div className="animate-spin-accent h-8 w-8 rounded-full border-2 border-[rgba(186,91,51,0.2)] border-t-[var(--accent)]" />
+        <p className="text-sm text-[var(--ink-faint)]">Loading your path…</p>
       </div>
     );
   }
 
   const primary = primaryAction(data);
+  const showTerritory = data.canEditTerritory;
 
   return (
     <div className="animate-rise space-y-6">
@@ -105,7 +170,6 @@ export function PortalClient({
         </p>
       </div>
 
-      {/* Progress rail */}
       <div className="flex gap-1 overflow-x-auto pb-1">
         {data.steps.map((s) => (
           <div
@@ -123,79 +187,74 @@ export function PortalClient({
         ))}
       </div>
 
-      {primary && (
-        primary.external ? (
-          <a href={primary.href} className="hl-btn-primary w-full" target="_blank" rel="noreferrer">
+      {primary &&
+        (primary.external ? (
+          <a
+            href={primary.href}
+            target="_blank"
+            rel="noreferrer"
+            className="hl-btn-primary w-full"
+          >
             {primary.label}
           </a>
         ) : (
-        <Link href={primary.href} className="hl-btn-primary w-full">
-          {primary.label}
-        </Link>
-        )
-      )}
-
-      {data.multitask && (
-        <div className="hl-card px-4 py-3 text-sm text-[var(--ink-muted)]">
-          Multitask screen: {data.multitask.correct}/{data.multitask.scored} ·{" "}
-          {data.multitask.score}/10
-        </div>
-      )}
+          <Link href={primary.href} className="hl-btn-primary w-full">
+            {primary.label}
+          </Link>
+        ))}
 
       {data.pipelineStatus === "production_ready" && data.hearthlineOs && (
-        <section className="hl-card-solid space-y-3 p-5">
-          <h2 className="hl-serif text-xl text-[var(--ink)]">Your Hearthline OS seat</h2>
-          <p className="text-sm text-[var(--ink-muted)]">{data.hearthlineOs.note}</p>
-          <p className="text-sm text-[var(--ink)]">
-            Use <strong>{data.candidate.email}</strong> with Google. You're provisioned as{" "}
-            <strong>{data.roleTitle || "Sales Closer"}</strong> with vertical leads and a full job kit.
+        <div className="hl-card space-y-3 border border-[var(--success-border)] bg-[var(--success-bg)] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--success)]">
+            Production ready
+          </p>
+          <h2 className="hl-serif text-xl text-[var(--ink)]">
+            Your Hearthline OS seat
+          </h2>
+          <p className="text-sm text-[var(--ink-muted)]">
+            {data.hearthlineOs.note}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <a
               href={data.hearthlineOs.loginUrl}
-              className="hl-btn-primary flex-1 text-center"
               target="_blank"
               rel="noreferrer"
+              className="hl-btn-primary flex-1"
             >
               Sign in to Hearthline OS
             </a>
             <a
               href={data.hearthlineOs.jobKitUrl}
-              className="hl-btn-secondary flex-1 text-center"
               target="_blank"
               rel="noreferrer"
+              className="hl-btn-secondary flex-1"
             >
-              Job kit (after login)
+              Job kit
             </a>
           </div>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-[var(--ink-muted)]">
-            <li>Today queue — ranked dials for your vertical</li>
-            <li>Job kit — ICP, scripts, products, first-week plan</li>
-            <li>Playbook — channel hierarchy + daily cadence</li>
-          </ul>
-        </section>
+        </div>
       )}
 
-      {/* Setup */}
       {!!data.setupTasks?.length && (
         <section className="space-y-3">
           <h2 className="hl-serif text-xl text-[var(--ink)]">
-            Setup checklist ({data.setupProgress.done}/{data.setupProgress.total})
+            Setup checklist ({data.setupProgress.done}/
+            {data.setupProgress.total})
           </h2>
           {data.setupTasks.map((task) => (
             <div key={task.id} className="hl-card-solid p-4">
               <div className="flex items-start gap-3">
                 <button
                   type="button"
-                  onClick={() =>
-                    void toggleTask(task.id, !task.completedAt)
-                  }
+                  onClick={() => void toggleTask(task.id, !task.completedAt)}
                   className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${
                     task.completedAt
                       ? "border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success)]"
                       : "border-[var(--line-strong)] bg-white"
                   }`}
-                  aria-label={task.completedAt ? "Mark incomplete" : "Mark complete"}
+                  aria-label={
+                    task.completedAt ? "Mark incomplete" : "Mark complete"
+                  }
                 >
                   {task.completedAt ? "✓" : ""}
                 </button>
@@ -232,17 +291,8 @@ export function PortalClient({
         <h2 className="hl-serif text-xl text-[var(--ink)]">Training</h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           Modules read: {data.training.modulesRead?.length || 0} · Quiz:{" "}
-          {data.training.quizPassed
-            ? `passed (${data.training.quizScore}%)`
-            : data.training.quizScore != null
-              ? `${data.training.quizScore}%`
-              : "not yet"}{" "}
-          · Pitch:{" "}
-          {data.training.practicePitchPassed
-            ? `passed (${data.training.practicePitchScore}/10)`
-            : data.training.practicePitchScore != null
-              ? `${data.training.practicePitchScore}/10`
-              : "not yet"}
+          {data.training.quizPassed ? "passed" : "not yet"} · Pitch:{" "}
+          {data.training.practicePitchPassed ? "passed" : "not yet"}
         </p>
         <Link
           href={`/train/${data.id}?t=${data.portalToken}`}
@@ -251,6 +301,68 @@ export function PortalClient({
           Open training →
         </Link>
       </section>
+
+      {showTerritory && (
+        <section className="hl-card space-y-3 p-5">
+          <div>
+            <h2 className="hl-serif text-xl text-[var(--ink)]">
+              Your territory
+            </h2>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">
+              Pick area codes that match the phone you dial from. Leads with
+              those NPAs route to you first.
+              {data.suggestedAreaCode
+                ? ` Your phone suggests ${data.suggestedAreaCode}.`
+                : ""}
+            </p>
+          </div>
+          <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
+            {(data.areaCodeOptions || []).map((r) => {
+              const on = selectedCodes.includes(r.code);
+              return (
+                <button
+                  key={r.code}
+                  type="button"
+                  onClick={() => toggleCode(r.code)}
+                  title={`${r.region}, ${r.state}`}
+                  className={`rounded-full border px-2.5 py-1 text-[12px] font-medium transition ${
+                    on
+                      ? "border-[var(--accent-border)] bg-[var(--accent-wash)] text-[var(--accent)]"
+                      : "border-[var(--line)] bg-white/60 text-[var(--ink-soft)]"
+                  }`}
+                >
+                  {r.code} {r.state}
+                </button>
+              );
+            })}
+          </div>
+          <label className="block">
+            <span className="text-[12px] font-medium text-[var(--ink-muted)]">
+              States (optional, comma-separated)
+            </span>
+            <input
+              value={states}
+              onChange={(e) => setStates(e.target.value)}
+              className="hl-input"
+              placeholder="SC, NC"
+            />
+          </label>
+          <p className="text-[12px] text-[var(--ink-faint)]">
+            Selected: {selectedCodes.join(", ") || "none"} (max 12)
+          </p>
+          {terrMsg && (
+            <p className="text-sm text-[var(--ink-soft)]">{terrMsg}</p>
+          )}
+          <button
+            type="button"
+            disabled={terrBusy || !selectedCodes.length}
+            onClick={() => void saveTerritory()}
+            className="hl-btn-primary w-full disabled:opacity-50"
+          >
+            {terrBusy ? "Saving…" : "Save territory"}
+          </button>
+        </section>
+      )}
 
       {data.calendarUrl && (
         <a
@@ -266,7 +378,9 @@ export function PortalClient({
   );
 }
 
-function primaryAction(data: PortalData): { href: string; label: string; external?: boolean } | null {
+function primaryAction(
+  data: PortalData,
+): { href: string; label: string; external?: boolean } | null {
   const s = data.pipelineStatus;
   if (s === "hm_invited" || s === "hm_in_progress") {
     if (data.hmInterviewId)
@@ -292,7 +406,10 @@ function primaryAction(data: PortalData): { href: string; label: string; externa
         label: "Continue onboarding with Riley →",
       };
   }
-  if (s === "setup_in_progress" || s === "training_in_progress") {
+  if (s === "setup_in_progress") {
+    return null;
+  }
+  if (s === "training_in_progress" || s === "setup_complete") {
     return {
       href: `/train/${data.id}?t=${data.portalToken}`,
       label: "Continue training →",
@@ -302,8 +419,8 @@ function primaryAction(data: PortalData): { href: string; label: string; externa
     if (data.hearthlineOs?.loginUrl) {
       return {
         href: data.hearthlineOs.loginUrl,
-        label: "Open Hearthline OS (your queue) →",
-        external: true as const,
+        label: "Open Hearthline OS (your seat) →",
+        external: true,
       };
     }
     return null;
