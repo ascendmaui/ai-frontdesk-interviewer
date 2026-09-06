@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
+import {
+  certificationCheck,
+  CERT_PITCH_PASS,
+  CERT_QUIZ_PASS,
+  CERT_ROLEPLAY_PASSES,
+} from "@/lib/certification";
 import { runProductionReadyEffects } from "@/lib/closer-ready";
 import { portalAuthError } from "@/lib/portal-auth";
 import {
-  getAcademyForRole,
-  PITCH_PASS,
-  QUIZ_PASS,
-} from "@/lib/training-content";
+  SALES_CORE_MODULES,
+  SALES_CORE_QUIZ,
+} from "@/lib/sales-curriculum";
+import { getAcademyForRole } from "@/lib/training-content";
 import {
   createInterview,
   getInterview,
   newId,
   updateInterview,
 } from "@/lib/store";
-import type { InterviewRecord } from "@/lib/types";
+import type { InterviewRecord, TrainingState } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -22,16 +28,20 @@ export async function GET(
 ) {
   const { id } = await ctx.params;
   const t = new URL(req.url).searchParams.get("t") || "";
-  const root = await getInterview(id);
-  if (!root) {
+  const record = await getInterview(id);
+  if (!record) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const rootId = record.rootId || record.id;
+  const root = (await getInterview(rootId)) || record;
   const auth = portalAuthError(t, root.portalToken);
   if (auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   const academy = getAcademyForRole(root.roleSlug);
+  const modules = [...SALES_CORE_MODULES, ...academy.modules];
+  const quiz = [...SALES_CORE_QUIZ, ...academy.quiz];
 
   return NextResponse.json({
     academy: {
@@ -42,21 +52,19 @@ export async function GET(
       talkTracks: academy.talkTracks,
       objections: academy.objections,
     },
-    modules: academy.modules.map(({ id, title, minutes, body }) => ({
+    modules: modules.map(({ id, title, minutes, body }) => ({
       id,
       title,
       minutes,
       body,
     })),
-    quiz: academy.quiz.map(({ id, prompt, options }) => ({
-      id,
-      prompt,
-      options,
-    })),
+    quiz: quiz.map(({ id, prompt, options }) => ({ id, prompt, options })),
     training: root.training || { modulesRead: [], quizAttempts: 0 },
     roleSlug: root.roleSlug,
-    passMark: Math.round(QUIZ_PASS * 100),
-    pitchPass: PITCH_PASS,
+    passMark: Math.round(CERT_QUIZ_PASS * 100),
+    pitchPass: CERT_PITCH_PASS,
+    roleplayRequired: CERT_ROLEPLAY_PASSES,
+    certification: certificationCheck(root),
     pipelineStatus: root.pipelineStatus,
     portalToken: root.portalToken,
     hmInterviewId: root.hmInterviewId,
@@ -82,18 +90,21 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const root = await getInterview(id);
-  if (!root) {
+  const record = await getInterview(id);
+  if (!record) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const rootId = record.rootId || record.id;
+  const root = (await getInterview(rootId)) || record;
   const auth = portalAuthError(body.token, root.portalToken);
   if (auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   const academy = getAcademyForRole(root.roleSlug);
-
-  const training = {
+  const modules = [...SALES_CORE_MODULES, ...academy.modules];
+  const quiz = [...SALES_CORE_QUIZ, ...academy.quiz];
+  const training: TrainingState = {
     modulesRead: [...(root.training?.modulesRead || [])],
     quizScore: root.training?.quizScore,
     quizPassed: root.training?.quizPassed,
@@ -101,84 +112,86 @@ export async function POST(
     practicePitchSessionId: root.training?.practicePitchSessionId,
     practicePitchScore: root.training?.practicePitchScore,
     practicePitchPassed: root.training?.practicePitchPassed,
+    roleplayAttempts: root.training?.roleplayAttempts || 0,
+    roleplayPasses: root.training?.roleplayPasses || 0,
+    bestPitchScore: root.training?.bestPitchScore,
     completedAt: root.training?.completedAt,
   };
 
   if (body.action === "read_module" && body.moduleId) {
+    if (!modules.some((m) => m.id === body.moduleId)) {
+      return NextResponse.json({ error: "Unknown module" }, { status: 400 });
+    }
     if (!training.modulesRead.includes(body.moduleId)) {
       training.modulesRead.push(body.moduleId);
     }
-    await updateInterview(id, {
+    await updateInterview(rootId, {
       training,
       pipelineStatus:
-        root.pipelineStatus === "setup_complete" ||
-        root.pipelineStatus === "setup_in_progress"
-          ? "training_in_progress"
-          : root.pipelineStatus,
+        root.pipelineStatus === "production_ready"
+          ? "production_ready"
+          : "training_in_progress",
     });
-    return NextResponse.json({ ok: true, training });
+    const final = await finalizeCertification(rootId);
+    return NextResponse.json({ ok: true, training: final.root.training, certification: final.certification });
   }
 
   if (body.action === "submit_quiz" && body.answers) {
     let correct = 0;
-    for (const q of academy.quiz) {
+    for (const q of quiz) {
       if (body.answers[q.id] === q.correctIndex) correct += 1;
     }
-    const score = correct / academy.quiz.length;
+    const score = quiz.length ? correct / quiz.length : 0;
     training.quizAttempts += 1;
     training.quizScore = Math.round(score * 100);
-    training.quizPassed = score >= QUIZ_PASS;
+    training.quizPassed = score >= CERT_QUIZ_PASS;
 
-    let pipelineStatus = root.pipelineStatus;
-    if (
-      training.quizPassed &&
-      training.practicePitchPassed &&
-      training.modulesRead.length >= 3
-    ) {
-      training.completedAt = new Date().toISOString();
-      pipelineStatus = "production_ready";
-    } else {
-      pipelineStatus = "training_in_progress";
-    }
-
-    await updateInterview(id, { training, pipelineStatus });
-    let hearthlineProvision = null;
-    let territory = null;
-    if (pipelineStatus === "production_ready") {
-      const latest = (await getInterview(id)) || root;
-      const effects = await runProductionReadyEffects(latest, {
-        trigger: "auto_training_complete",
-      });
-      hearthlineProvision = effects.hearthlineProvision;
-      territory = effects.territory;
-    }
+    await updateInterview(rootId, {
+      training,
+      pipelineStatus:
+        root.pipelineStatus === "production_ready"
+          ? "production_ready"
+          : "training_in_progress",
+    });
+    const final = await finalizeCertification(rootId);
     return NextResponse.json({
       ok: true,
-      training,
+      training: final.root.training,
       correct,
-      total: academy.quiz.length,
+      total: quiz.length,
       passed: training.quizPassed,
-      pipelineStatus,
-      hearthlineProvision,
-      territory,
+      pipelineStatus: final.root.pipelineStatus,
+      certification: final.certification,
+      hearthlineProvision: final.hearthlineProvision,
+      territory: final.territory,
     });
   }
 
   if (body.action === "start_pitch") {
-    let pitchId = root.practicePitchSessionId;
-    if (!pitchId) {
-      const child = await createPitch(root);
-      pitchId = child.id;
-      training.practicePitchSessionId = pitchId;
-      await updateInterview(id, {
-        practicePitchSessionId: pitchId,
-        training,
-        pipelineStatus: "training_in_progress",
-      });
+    const currentId = root.training?.practicePitchSessionId;
+    if (currentId) {
+      const current = await getInterview(currentId);
+      if (current && (current.status === "applied" || current.status === "in_progress")) {
+        return NextResponse.json({
+          ok: true,
+          interviewPath: `/interview/${current.id}`,
+          resumed: true,
+        });
+      }
     }
+
+    const child = await createPitch(root);
+    training.practicePitchSessionId = child.id;
+    await updateInterview(rootId, {
+      practicePitchSessionId: child.id,
+      training,
+      pipelineStatus: "training_in_progress",
+    });
     return NextResponse.json({
       ok: true,
-      interviewPath: `/interview/${pitchId}`,
+      interviewPath: `/interview/${child.id}`,
+      roleplayPasses: training.roleplayPasses || 0,
+      roleplayRequired: CERT_ROLEPLAY_PASSES,
     });
   }
 
@@ -205,4 +218,37 @@ async function createPitch(parent: InterviewRecord): Promise<InterviewRecord> {
   };
   await createInterview(record);
   return record;
+}
+
+async function finalizeCertification(rootId: string): Promise<{
+  root: InterviewRecord;
+  certification: ReturnType<typeof certificationCheck>;
+  hearthlineProvision: Awaited<ReturnType<typeof runProductionReadyEffects>>["hearthlineProvision"] | null;
+  territory: Awaited<ReturnType<typeof runProductionReadyEffects>>["territory"] | null;
+}> {
+  let root = await getInterview(rootId);
+  if (!root) throw new Error("Root application not found");
+  let certification = certificationCheck(root);
+  let hearthlineProvision = null;
+  let territory = null;
+
+  if (certification.certified && root.pipelineStatus !== "production_ready") {
+    const training: TrainingState = {
+      ...(root.training || { modulesRead: [], quizAttempts: 0 }),
+      completedAt: root.training?.completedAt || new Date().toISOString(),
+    };
+    root =
+      (await updateInterview(rootId, {
+        training,
+        pipelineStatus: "production_ready",
+      })) || root;
+    certification = certificationCheck(root);
+    const effects = await runProductionReadyEffects(root, {
+      trigger: "auto_certification_complete",
+    });
+    hearthlineProvision = effects.hearthlineProvision;
+    territory = effects.territory;
+  }
+
+  return { root, certification, hearthlineProvision, territory };
 }
