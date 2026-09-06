@@ -130,6 +130,9 @@ export type TrainingState = {
   practicePitchSessionId?: string;
   practicePitchScore?: number;
   practicePitchPassed?: boolean;
+  roleplayAttempts?: number;
+  roleplayPasses?: number;
+  bestPitchScore?: number;
   completedAt?: string;
 };
 
