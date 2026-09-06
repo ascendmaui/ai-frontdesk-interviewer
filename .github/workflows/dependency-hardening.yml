@@ -21,10 +21,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Patch vulnerable production dependencies
+      - name: Patch vulnerable dependencies
         run: |
           npm install next@16.3.4 --save-exact
-          npm audit fix --omit=dev
+          npm audit fix
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run build
@@ -37,5 +37,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
-          git commit -m "chore: patch production dependency vulnerabilities"
+          git commit -m "chore: patch dependency vulnerabilities"
           git push origin HEAD:finish/sales-coach-certification
