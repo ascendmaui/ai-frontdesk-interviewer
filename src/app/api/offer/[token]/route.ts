@@ -76,7 +76,10 @@ export async function POST(
       pipelineStatus: "offer_declined",
     });
     if (rec.id !== rootId) {
-      await updateInterview(rec.id, { offer, pipelineStatus: "offer_declined" });
+      await updateInterview(rec.id, {
+        offer,
+        pipelineStatus: "offer_declined",
+      });
     }
     return NextResponse.json({
       ok: true,
@@ -120,9 +123,7 @@ export async function POST(
         },
       },
       {
-        nextSession: onboardingId
-          ? await getInterview(onboardingId)
-          : null,
+        nextSession: onboardingId ? await getInterview(onboardingId) : null,
       },
     ).catch(() => null);
   }
@@ -131,7 +132,7 @@ export async function POST(
     ok: true,
     status: "accepted",
     applicationId: rootId,
-    onboardingPath: `/interview/${onboardingId}`,
+    onboardingPath: `/interview/${onboardingId}?t=${root.portalToken}`,
     portalPath: `/portal/${rootId}?t=${root.portalToken}`,
     publicUrl: publicAppUrl(),
   });

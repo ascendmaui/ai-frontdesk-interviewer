@@ -119,7 +119,7 @@ function candidateEmailContent(
   const brand = COMPANY.product;
   const score = interview.scorecard?.overallScore;
   const kind = interview.kind || "screening";
-  const nextUrl = nextSession ? stagePath(nextSession.id) : "";
+  void nextSession;
   const slackInvite = process.env.ONBOARDING_SLACK_INVITE_URL || "";
   const handbook = process.env.ONBOARDING_HANDBOOK_URL || "";
 

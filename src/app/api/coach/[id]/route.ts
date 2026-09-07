@@ -54,19 +54,19 @@ export async function POST(
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const message = String(body.message || "").trim().slice(0, 6000);
+  const message = String(body.message || "")
+    .trim()
+    .slice(0, 6000);
   if (!message) {
     return NextResponse.json({ error: "message required" }, { status: 400 });
   }
   const mode: CoachMode =
     body.mode === "call_prep" || body.mode === "debrief" ? body.mode : "coach";
   const recent = Array.isArray(body.recent)
-    ? body.recent
-        .slice(-8)
-        .map((m) => ({
-          role: m.role === "assistant" ? "assistant" : "user",
-          text: String(m.text || "").slice(0, 2500),
-        }))
+    ? body.recent.slice(-8).map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        text: String(m.text || "").slice(0, 2500),
+      }))
     : [];
 
   const academy = getAcademyForRole(root.roleSlug);
@@ -188,17 +188,30 @@ Keep ordinary answers under about 250 words unless the closer asks for deeper tr
     });
     const data = await r.json();
     if (!r.ok) {
-      console.error("[coach] xAI fallback failed", r.status, safeApiError(data));
-      return NextResponse.json({ error: "Coach provider unavailable" }, { status: 502 });
+      console.error(
+        "[coach] xAI fallback failed",
+        r.status,
+        safeApiError(data),
+      );
+      return NextResponse.json(
+        { error: "Coach provider unavailable" },
+        { status: 502 },
+      );
     }
     const reply = String(data?.choices?.[0]?.message?.content || "").trim();
     if (!reply) {
-      return NextResponse.json({ error: "Coach returned no text" }, { status: 502 });
+      return NextResponse.json(
+        { error: "Coach returned no text" },
+        { status: 502 },
+      );
     }
     return NextResponse.json({ reply, provider: "xai-fallback", model });
   } catch (e) {
     console.error("[coach] request failed", e);
-    return NextResponse.json({ error: "Coach request failed" }, { status: 502 });
+    return NextResponse.json(
+      { error: "Coach request failed" },
+      { status: 502 },
+    );
   }
 }
 
@@ -224,6 +237,7 @@ function extractOpenAIText(data: unknown): string {
 function safeApiError(data: unknown): string {
   const d = data as { error?: { message?: string } | string };
   if (typeof d?.error === "string") return d.error.slice(0, 300);
-  if (typeof d?.error?.message === "string") return d.error.message.slice(0, 300);
+  if (typeof d?.error?.message === "string")
+    return d.error.message.slice(0, 300);
   return "provider error";
 }

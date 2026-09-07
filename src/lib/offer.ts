@@ -1,7 +1,7 @@
 import { COMPANY } from "./company";
 import { getRole } from "./roles";
 import type { OfferRecord } from "./types";
-import { newId } from "./store";
+import { newId, newPortalToken } from "./store";
 
 export function createOffer(roleSlug: string): OfferRecord {
   const role = getRole(roleSlug);
@@ -10,7 +10,7 @@ export function createOffer(roleSlug: string): OfferRecord {
     process.env.OFFER_TERMS_HTML ||
     defaultOfferBody(role?.title || "Sales Closer", role?.industry || "");
 
-  const token = `off_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  const token = newPortalToken().replace("pt_", "off_");
   return {
     id: newId().replace("int_", "offer_"),
     token,

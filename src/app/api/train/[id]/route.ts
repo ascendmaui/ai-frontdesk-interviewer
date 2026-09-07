@@ -7,10 +7,7 @@ import {
 } from "@/lib/certification";
 import { runProductionReadyEffects } from "@/lib/closer-ready";
 import { portalAuthError } from "@/lib/portal-auth";
-import {
-  SALES_CORE_MODULES,
-  SALES_CORE_QUIZ,
-} from "@/lib/sales-curriculum";
+import { SALES_CORE_MODULES, SALES_CORE_QUIZ } from "@/lib/sales-curriculum";
 import { getAcademyForRole } from "@/lib/training-content";
 import {
   createInterview,
@@ -133,7 +130,11 @@ export async function POST(
           : "training_in_progress",
     });
     const final = await finalizeCertification(rootId);
-    return NextResponse.json({ ok: true, training: final.root.training, certification: final.certification });
+    return NextResponse.json({
+      ok: true,
+      training: final.root.training,
+      certification: final.certification,
+    });
   }
 
   if (body.action === "submit_quiz" && body.answers) {
@@ -171,10 +172,13 @@ export async function POST(
     const currentId = root.training?.practicePitchSessionId;
     if (currentId) {
       const current = await getInterview(currentId);
-      if (current && (current.status === "applied" || current.status === "in_progress")) {
+      if (
+        current &&
+        (current.status === "applied" || current.status === "in_progress")
+      ) {
         return NextResponse.json({
           ok: true,
-          interviewPath: `/interview/${current.id}`,
+          interviewPath: `/interview/${current.id}?t=${root.portalToken}`,
           resumed: true,
         });
       }
@@ -189,7 +193,7 @@ export async function POST(
     });
     return NextResponse.json({
       ok: true,
-      interviewPath: `/interview/${child.id}`,
+      interviewPath: `/interview/${child.id}?t=${root.portalToken}`,
       roleplayPasses: training.roleplayPasses || 0,
       roleplayRequired: CERT_ROLEPLAY_PASSES,
     });
@@ -223,8 +227,13 @@ async function createPitch(parent: InterviewRecord): Promise<InterviewRecord> {
 async function finalizeCertification(rootId: string): Promise<{
   root: InterviewRecord;
   certification: ReturnType<typeof certificationCheck>;
-  hearthlineProvision: Awaited<ReturnType<typeof runProductionReadyEffects>>["hearthlineProvision"] | null;
-  territory: Awaited<ReturnType<typeof runProductionReadyEffects>>["territory"] | null;
+  hearthlineProvision:
+    | Awaited<
+        ReturnType<typeof runProductionReadyEffects>
+      >["hearthlineProvision"]
+    | null;
+  territory:
+    Awaited<ReturnType<typeof runProductionReadyEffects>>["territory"] | null;
 }> {
   let root = await getInterview(rootId);
   if (!root) throw new Error("Root application not found");

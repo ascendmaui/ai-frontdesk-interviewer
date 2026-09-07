@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { certificationCheck } from "@/lib/certification";
+import { adminAuthError } from "@/lib/admin-auth";
 import { createOffer } from "@/lib/offer";
 import { notifyStageComplete } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/pipeline";
@@ -11,20 +13,15 @@ import {
   newPortalToken,
   updateInterview,
 } from "@/lib/store";
-import type { InterviewKind, InterviewRecord, PipelineStatus } from "@/lib/types";
+import type {
+  InterviewKind,
+  InterviewRecord,
+  PipelineStatus,
+} from "@/lib/types";
 import { runProductionReadyEffects } from "@/lib/closer-ready";
 import { provisionToHearthlineOs } from "@/lib/hearthline-os";
 
 export const runtime = "nodejs";
-
-function authed(req: Request): boolean {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return false;
-  const auth = req.headers.get("authorization") || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  const q = new URL(req.url).searchParams.get("secret") || "";
-  return token === secret || q === secret;
-}
 
 function links(root: InterviewRecord, extra?: Partial<InterviewRecord>) {
   const r = { ...root, ...extra };
@@ -35,10 +32,10 @@ function links(root: InterviewRecord, extra?: Partial<InterviewRecord>) {
       ? `${base}/portal/${r.rootId || r.id}?t=${r.portalToken}`
       : null,
     hmInterviewUrl: r.hmInterviewId
-      ? `${base}/interview/${r.hmInterviewId}`
+      ? `${base}/interview/${r.hmInterviewId}?t=${r.portalToken}`
       : null,
     onboardingUrl: r.onboardingInterviewId
-      ? `${base}/interview/${r.onboardingInterviewId}`
+      ? `${base}/interview/${r.onboardingInterviewId}?t=${r.portalToken}`
       : null,
     offerUrl: r.offer?.token ? `${base}/offer/${r.offer.token}` : null,
     trainUrl: r.portalToken
@@ -51,15 +48,7 @@ function links(root: InterviewRecord, extra?: Partial<InterviewRecord>) {
 }
 
 export async function POST(req: Request) {
-  if (!authed(req)) {
-    return NextResponse.json(
-      {
-        error:
-          "Unauthorized — check ADMIN_SECRET matches Vercel env (dev-admin-change-me by default).",
-      },
-      { status: 401 },
-    );
-  }
+  const access = adminAuthError(req); if (access) return access;
 
   let body: { action?: string; id?: string; roleSlug?: string };
   try {
@@ -218,6 +207,14 @@ export async function POST(req: Request) {
   }
 
   if (action === "production_ready") {
+    if (!certificationCheck(app).certified)
+      return NextResponse.json(
+        {
+          error:
+            "Complete certification through the applicant flow before enabling live leads.",
+        },
+        { status: 409 },
+      );
     await updateInterview(rootId, {
       pipelineStatus: "production_ready",
       training: {
@@ -265,9 +262,10 @@ export async function POST(req: Request) {
     });
     // Also stamp on screening record if different
     if (app.id !== id) {
-      await updateInterview(id, { offer, pipelineStatus: "offer_pending" }).catch(
-        () => null,
-      );
+      await updateInterview(id, {
+        offer,
+        pipelineStatus: "offer_pending",
+      }).catch(() => null);
     }
     const updated = (await getInterview(rootId))!;
     try {
@@ -305,7 +303,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       hmInterviewId: hmId,
-      message: "Hiring manager session ready. Open the HM link to talk to Morgan.",
+      message:
+        "Hiring manager session ready. Open the HM link to talk to Morgan.",
       links: links(updated),
     });
   }
@@ -396,8 +395,9 @@ export async function POST(req: Request) {
         nextAction: "Open HM interview link.",
         evidence: {
           talkTurns: (app.transcript || []).length,
-          candidateTurns: (app.transcript || []).filter((t) => t.role === "user")
-            .length,
+          candidateTurns: (app.transcript || []).filter(
+            (t) => t.role === "user",
+          ).length,
           assistantTurns: (app.transcript || []).filter(
             (t) => t.role === "assistant",
           ).length,
@@ -427,9 +427,7 @@ export async function POST(req: Request) {
 
     // Prefer longest transcript among root + children
     const all = await listApplications(500);
-    const related = all.filter(
-      (s) => s.id === rootId || s.rootId === rootId || s.parentId === rootId,
-    );
+    void all;
     // also load by listing all interviews
     const { listInterviews } = await import("@/lib/store");
     const every = await listInterviews(500);

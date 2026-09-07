@@ -36,6 +36,7 @@ import type {
   TranscriptLine,
 } from "@/lib/types";
 import { INCOMPLETE_SEC } from "@/lib/types";
+import { candidateAuthError } from "@/lib/candidate-auth";
 
 export const runtime = "nodejs";
 
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
     multitaskAnswers?: MultitaskAnswer[];
     eventTypes?: string[];
     force?: boolean;
+    token?: string;
   };
   try {
     body = await req.json();
@@ -66,12 +68,13 @@ export async function POST(req: Request) {
   if (!existing) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
   }
+  const access = candidateAuthError(req, existing, body.token);
+  if (access) return access;
 
   const kind = existing.kind || "screening";
   const clientTx = Array.isArray(body.transcript) ? body.transcript : [];
   const savedTx = existing.transcript || [];
-  const transcript =
-    clientTx.length >= savedTx.length ? clientTx : savedTx;
+  const transcript = clientTx.length >= savedTx.length ? clientTx : savedTx;
   const durationSec =
     typeof body.durationSec === "number"
       ? body.durationSec
@@ -82,7 +85,7 @@ export async function POST(req: Request) {
     multitask = scoreMultitask(body.multitaskAnswers);
   }
 
-  if (existing.status === "completed" && existing.scorecard && !body.force) {
+  if (existing.status === "completed" && existing.scorecard) {
     return NextResponse.json({ interview: existing, cached: true });
   }
 
@@ -118,7 +121,7 @@ export async function POST(req: Request) {
 
     let pipelineStatus: PipelineStatus = existing.pipelineStatus;
     let hmInterviewId = existing.hmInterviewId;
-    let onboardingInterviewId = existing.onboardingInterviewId;
+    const onboardingInterviewId = existing.onboardingInterviewId;
     let practicePitchSessionId = existing.practicePitchSessionId;
     let offer = existing.offer;
     let setupTasks = existing.setupTasks;
@@ -159,8 +162,8 @@ export async function POST(req: Request) {
       const passed = !incomplete && score >= CERT_PITCH_PASS;
       const rootId = existing.rootId || existing.parentId || interviewId;
       const root = await getInterview(rootId);
-      const prior: TrainingState =
-        root?.training || existing.training || { modulesRead: [], quizAttempts: 0 };
+      const prior: TrainingState = root?.training ||
+        existing.training || { modulesRead: [], quizAttempts: 0 };
       const roleplayAttempts = (prior.roleplayAttempts || 0) + 1;
       const roleplayPasses = (prior.roleplayPasses || 0) + (passed ? 1 : 0);
       const bestPitchScore = Math.max(prior.bestPitchScore || 0, score);

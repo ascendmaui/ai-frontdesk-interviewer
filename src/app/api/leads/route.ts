@@ -41,7 +41,9 @@ export async function POST(req: Request) {
   }
 
   const phone = String(body.phone || "").trim();
-  const industry = String(body.industry || "").trim().toLowerCase();
+  const industry = String(body.industry || "")
+    .trim()
+    .toLowerCase();
   const digits = phone.replace(/\D/g, "");
   if (!phone || digits.length < 10 || digits.length > 15) {
     return NextResponse.json(
@@ -50,7 +52,10 @@ export async function POST(req: Request) {
     );
   }
   if (!industry) {
-    return NextResponse.json({ error: "industry is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "industry is required" },
+      { status: 400 },
+    );
   }
   if (
     body.email &&
@@ -143,13 +148,7 @@ export async function PATCH(req: Request) {
   }
   const updated = await updateLeadStatus(body.id, {
     status: body.status as
-      | "new"
-      | "routed"
-      | "working"
-      | "won"
-      | "lost"
-      | "unassigned"
-      | undefined,
+      "new" | "routed" | "working" | "won" | "lost" | "unassigned" | undefined,
     assignedCloserId: body.assignedCloserId,
     assignedCloserName: body.assignedCloserName,
     notes: body.notes,

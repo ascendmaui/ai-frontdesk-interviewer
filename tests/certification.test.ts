@@ -68,7 +68,10 @@ test("certification passes only when every gate is satisfied", () => {
 
 test("three read modules are not enough", () => {
   const r = root();
-  r.training = { ...r.training!, modulesRead: requiredModuleIds(r.roleSlug).slice(0, 3) };
+  r.training = {
+    ...r.training!,
+    modulesRead: requiredModuleIds(r.roleSlug).slice(0, 3),
+  };
   const result = certificationCheck(r);
   assert.equal(result.certified, false);
   assert.match(result.blockers.join(" "), /Read all required academy modules/);
@@ -98,7 +101,12 @@ test("one passing roleplay is not enough", () => {
 test("incomplete required setup blocks certification", () => {
   const r = root();
   r.setupTasks = [
-    { id: "required", title: "Required", description: "Required", required: true },
+    {
+      id: "required",
+      title: "Required",
+      description: "Required",
+      required: true,
+    },
   ];
   const result = certificationCheck(r);
   assert.equal(result.certified, false);

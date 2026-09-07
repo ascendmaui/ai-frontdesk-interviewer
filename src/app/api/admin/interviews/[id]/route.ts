@@ -1,17 +1,9 @@
 import { NextResponse } from "next/server";
 import { getRole } from "@/lib/roles";
 import { getInterview, listInterviews } from "@/lib/store";
+import { adminAuthError } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
-
-function authed(req: Request): boolean {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return false;
-  const auth = req.headers.get("authorization") || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  const q = new URL(req.url).searchParams.get("secret") || "";
-  return token === secret || q === secret;
-}
 
 /**
  * Full application review payload for admin:
@@ -21,15 +13,7 @@ export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  if (!process.env.ADMIN_SECRET) {
-    return NextResponse.json(
-      { error: "ADMIN_SECRET not configured" },
-      { status: 503 },
-    );
-  }
-  if (!authed(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const access = adminAuthError(req); if (access) return access;
 
   const { id } = await ctx.params;
   const interview = await getInterview(id);
@@ -44,7 +28,9 @@ export async function GET(
   // Collect all sessions in this application chain
   const all = await listInterviews(500);
   const sessions = all
-    .filter((s) => s.id === rootId || s.rootId === rootId || s.parentId === rootId)
+    .filter(
+      (s) => s.id === rootId || s.rootId === rootId || s.parentId === rootId,
+    )
     .sort(
       (a, b) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),

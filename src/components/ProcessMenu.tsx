@@ -206,7 +206,7 @@ export function ProcessMenu({ context }: { context?: ProcessMenuContext }) {
                   );
                 }
                 return (
-                  <li key={step.id} className="mb-2" aria-disabled="true">
+                  <li key={step.id} className="mb-2">
                     {inner}
                   </li>
                 );
