@@ -44,7 +44,7 @@ export async function GET(
   const osBase = (
     process.env.HEARTHLINE_OS_URL ||
     process.env.NEXT_PUBLIC_HEARTHLINE_OS_URL ||
-    "https://hearthline-gold.vercel.app"
+    "https://hearthline-platform.vercel.app"
   ).replace(/\/$/, "");
 
   const territories = await listTerritories().catch(() => []);

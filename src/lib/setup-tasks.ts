@@ -25,8 +25,8 @@ export function buildSetupTasks(): SetupTask[] {
         "Use the same Google email you applied with. After training, your seat unlocks leads + job kit. Open Job kit for scripts, ICP, and your queue.",
       href:
         process.env.HEARTHLINE_OS_URL
-          ? `${process.env.HEARTHLINE_OS_URL.replace(/\/$/, "")}/os/login`
-          : "https://hearthline-gold.vercel.app/os/login",
+          ? `${process.env.HEARTHLINE_OS_URL.replace(/\/$/, "")}/app`
+          : "https://hearthline-platform.vercel.app/app",
       required: true,
     },
     {
@@ -34,7 +34,7 @@ export function buildSetupTasks(): SetupTask[] {
       title: "Confirm CRM access",
       description:
         "Log in to CRM and open your pipeline board. If you can't log in, message ops.",
-      href: process.env.ONBOARDING_CRM_URL || "https://hearthline-gold.vercel.app/os",
+      href: process.env.ONBOARDING_CRM_URL || "https://hearthline-platform.vercel.app/app",
       required: true,
     },
     {

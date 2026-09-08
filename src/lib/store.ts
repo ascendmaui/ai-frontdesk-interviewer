@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import type { InterviewRecord } from "./types";
+import { syncApplicantToSpine } from "./spine-sync";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const FILE = path.join(DATA_DIR, "interviews.json");
@@ -226,6 +227,12 @@ export async function createInterview(
   const data = await readAll();
   data.interviews.unshift(record);
   await writeAll(data);
+  // Durable CRM sync (fire-and-log; never break hiring UX)
+  try {
+    await syncApplicantToSpine(record);
+  } catch (e) {
+    console.error("[store] spine sync after createInterview", e);
+  }
   return record;
 }
 
@@ -263,7 +270,14 @@ export async function updateInterview(
   if (idx < 0) return null;
   data.interviews[idx] = { ...data.interviews[idx], ...patch };
   await writeAll(data);
-  return data.interviews[idx];
+  const updated = data.interviews[idx];
+  // Durable CRM sync (fire-and-log; never break hiring UX)
+  try {
+    await syncApplicantToSpine(updated);
+  } catch (e) {
+    console.error("[store] spine sync after updateInterview", e);
+  }
+  return updated;
 }
 
 export async function listInterviews(limit = 200): Promise<InterviewRecord[]> {

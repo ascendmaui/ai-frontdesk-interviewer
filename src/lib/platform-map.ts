@@ -43,10 +43,10 @@ export const SYSTEMS: SystemNode[] = [
   },
   {
     id: "hearthline",
-    name: "Hearthline marketing site",
+    name: "Hearthline control plane",
     description:
-      "Customer-facing brand (hearthline). Funnel CTAs into industry paths.",
-    url: "https://hearthline-gold.vercel.app",
+      "Canonical CRM spine + product app (hearthline-platform). Gold URLs deprecated.",
+    url: "https://hearthline-platform.vercel.app",
     status: "live",
   },
   {
