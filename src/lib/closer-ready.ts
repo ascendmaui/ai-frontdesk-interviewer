@@ -5,6 +5,7 @@
  */
 
 import { provisionToHearthlineOs } from "./hearthline-os";
+import { syncApplicantToSpine } from "./spine-sync";
 import { activateCloserTerritory } from "./platform-store";
 import type { InterviewRecord } from "./types";
 
@@ -21,6 +22,16 @@ export async function runProductionReadyEffects(
     reassignLeads: opts?.reassignLeads,
     trigger: opts?.trigger,
   });
+
+  // Ensure production_ready always hits spine even if a store hook was missed
+  try {
+    await syncApplicantToSpine({
+      ...root,
+      pipelineStatus: "production_ready",
+    });
+  } catch (e) {
+    console.error("[closer-ready] spine sync", e);
+  }
 
   let territory: Awaited<ReturnType<typeof activateCloserTerritory>> | null =
     null;
