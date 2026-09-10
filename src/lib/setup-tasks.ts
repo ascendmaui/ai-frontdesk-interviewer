@@ -46,11 +46,12 @@ export function buildSetupTasks(): SetupTask[] {
     },
     {
       id: "slack",
-      title: "Join Slack",
+      title: "Join team chat (optional)",
       description:
-        "Accept the workspace invite and set your display name to First Last. Join #sales, #wins, #product-updates, and #general.",
+        "If your role uses Slack, accept the workspace invite and set your display name to First Last. Hiring updates also arrive by email and in the Hearthline app — Slack is not required.",
       href: process.env.ONBOARDING_SLACK_INVITE_URL || undefined,
-      required: true,
+      // Only required when an invite URL is configured; otherwise optional.
+      required: Boolean(process.env.ONBOARDING_SLACK_INVITE_URL),
     },
     {
       id: "handbook",

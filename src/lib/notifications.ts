@@ -41,10 +41,27 @@ function ctaButton(href: string, label: string): string {
   return `<p style="margin:24px 0"><a href="${href}" style="display:inline-block;background:#BA5B33;color:#FFF8F0;font-weight:600;text-decoration:none;padding:14px 26px;border-radius:99px">${escapeHtml(label)}</a></p>`;
 }
 
+let slackSkipLogged = false;
+
+/** Slack posts only when NOTIFICATIONS_SLACK=true (default off — email + in-app preferred). */
+export function slackNotificationsEnabled(): boolean {
+  return process.env.NOTIFICATIONS_SLACK === "true";
+}
+
 export async function postSlack(
   interview: InterviewRecord,
   opts?: { nextSession?: InterviewRecord | null },
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+  if (!slackNotificationsEnabled()) {
+    if (!slackSkipLogged) {
+      console.info(
+        "[notifications] Slack skipped (NOTIFICATIONS_SLACK is not true; email + in-app preferred)",
+      );
+      slackSkipLogged = true;
+    }
+    return { ok: true, skipped: true };
+  }
+
   const url = process.env.SLACK_WEBHOOK_URL;
   if (!url) {
     return { ok: false, error: "SLACK_WEBHOOK_URL not configured" };
@@ -199,10 +216,13 @@ After you accept, you'll start onboarding with Riley and complete setup + traini
 
   // ─── Onboarding ───
   const subject = `Onboarding complete — next actions at ${brand}`;
+  const slackStep = slackInvite
+    ? `1. Join the team workspace (optional): ${slackInvite}`
+    : `1. Team chat is optional — ops will share an invite if your role needs it`;
   const text = `Hi ${first},
 
 You finished the onboarding voice session with Riley. Complete these today:
-1. Join Slack ${slackInvite || "(check prior email)"}
+${slackStep}
 2. Open handbook ${handbook || "(ops will send)"}
 3. Confirm CRM/dialer access with ops if not live yet
 
@@ -215,11 +235,11 @@ Welcome to ${brand}.
     <h1 style="margin:0 0 14px;font-size:26px;font-weight:400;color:#231D15;font-family:Georgia,serif">You're set up, ${escapeHtml(first)}</h1>
     <p style="color:#6E6455;line-height:1.6">Riley walked you through day-one. Finish these:</p>
     <ol style="color:#6E6455;line-height:1.7;padding-left:18px">
-      <li>Join Slack ${slackInvite ? `— <a href="${slackInvite}" style="color:#BA5B33">invite link</a>` : ""}</li>
+      <li>${slackInvite ? `Join team chat (optional) — <a href="${slackInvite}" style="color:#BA5B33">invite link</a>` : "Team chat is optional — ops will share an invite if needed"}</li>
       <li>Open handbook ${handbook ? `— <a href="${handbook}" style="color:#BA5B33">checklist</a>` : ""}</li>
-      <li>Confirm CRM & dialer with ops if not provisioned</li>
+      <li>Confirm CRM &amp; dialer with ops if not provisioned</li>
     </ol>
-    <p style="color:#93876F;font-size:14px">See you in #sales.</p>
+    <p style="color:#93876F;font-size:14px">You'll get hiring updates by email and in the Hearthline app.</p>
   `);
   return { subject, text, html };
 }
@@ -310,8 +330,14 @@ async function sendMail(opts: {
     ? fromRaw
     : `${COMPANY.brand} Hiring <${fromRaw}>`;
   const payload = { ...opts, from };
+  const hasSmtp = Boolean(
+    (process.env.SMTP_USER || process.env.GMAIL_USER) &&
+      (process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD),
+  );
+  // Prefer Gmail/SMTP as primary path; Resend is an alternate when SMTP unset.
+  if (hasSmtp) return sendViaSmtp(payload);
   if (process.env.RESEND_API_KEY) return sendViaResend(payload);
-  return sendViaSmtp(payload);
+  return { ok: false, error: "No email provider configured (Gmail/SMTP or Resend)" };
 }
 
 export async function sendCandidateEmail(
@@ -370,6 +396,82 @@ export async function sendInternalEmail(
   });
 }
 
+function spineBase(): string {
+  return (
+    process.env.HEARTHLINE_SPINE_URL ||
+    process.env.HEARTHLINE_OS_URL ||
+    process.env.NEXT_PUBLIC_HEARTHLINE_OS_URL ||
+    "https://hearthline-platform.vercel.app"
+  ).replace(/\/$/, "");
+}
+
+function spineSecret(): string | undefined {
+  return (
+    process.env.HEARTHLINE_SPINE_SECRET ||
+    process.env.HEARTHLINE_PROVISION_SECRET ||
+    undefined
+  );
+}
+
+/**
+ * Fire-and-log POST to Hearthline spine in-app notifications.
+ * Never throws into hiring UX — spine failure must not fail the interview path.
+ */
+export async function notifySpineInApp(input: {
+  title: string;
+  body: string;
+  audience?: "ops" | "applicant" | "rep" | "system";
+  href?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+  payload?: Record<string, unknown>;
+  userId?: string | null;
+  organizationId?: string | null;
+}): Promise<{ ok: boolean; error?: string; id?: string; skipped?: boolean }> {
+  const secret = spineSecret();
+  if (!secret) {
+    return { ok: false, skipped: true, error: "HEARTHLINE_SPINE_SECRET not configured" };
+  }
+
+  try {
+    const res = await fetch(`${spineBase()}/api/spine/notifications`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-hearthline-spine-secret": secret,
+      },
+      body: JSON.stringify({
+        title: input.title,
+        body: input.body,
+        audience: input.audience || "ops",
+        channel: "in_app",
+        href: input.href ?? undefined,
+        entityType: input.entityType ?? undefined,
+        entityId: input.entityId ?? undefined,
+        payload: input.payload ?? {},
+        userId: input.userId ?? undefined,
+        organizationId: input.organizationId ?? undefined,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      id?: string;
+      notification?: { id?: string };
+    };
+    if (!res.ok) {
+      console.error("[notifications] spine in-app notify failed", res.status, data);
+      return { ok: false, error: data.error || `HTTP ${res.status}` };
+    }
+    const id = data.id || data.notification?.id;
+    console.info("[notifications] spine in-app notify ok", id || "");
+    return { ok: true, id };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Spine notify network error";
+    console.error("[notifications] spine in-app notify", message);
+    return { ok: false, error: message };
+  }
+}
+
 /** Stage-aware notify used by /api/complete */
 export async function notifyStageComplete(
   interview: InterviewRecord,
@@ -378,9 +480,10 @@ export async function notifyStageComplete(
     root?: InterviewRecord | null;
   },
 ): Promise<{
-  slack: { ok: boolean; error?: string };
+  slack: { ok: boolean; error?: string; skipped?: boolean };
   emailCandidate: { ok: boolean; error?: string };
   emailInternal: { ok: boolean; error?: string };
+  spineInApp: { ok: boolean; error?: string; id?: string; skipped?: boolean };
 }> {
   // Prefer root offer/token for HM complete
   const forEmail =
@@ -395,7 +498,47 @@ export async function notifyStageComplete(
       ? sendInternalEmail(forEmail, opts?.nextSession)
       : Promise.resolve({ ok: true as const }),
   ]);
-  return { slack, emailCandidate, emailInternal };
+
+  // After email notify events succeed, also fan out to spine in-app (never fail hiring).
+  let spineInApp: {
+    ok: boolean;
+    error?: string;
+    id?: string;
+    skipped?: boolean;
+  } = { ok: false, skipped: true };
+  if (emailCandidate.ok || emailInternal.ok) {
+    const role = getRole(forEmail.roleSlug);
+    const recommendation = rec(forEmail.scorecard);
+    const c = forEmail.candidate;
+    const kind = forEmail.kind || "screening";
+    try {
+      spineInApp = await notifySpineInApp({
+        title: `${REC_LABEL[recommendation]} — ${c.firstName} ${c.lastName}`,
+        body: `${kindLabel(kind)} · ${role?.title || forEmail.roleSlug} · score ${forEmail.scorecard?.overallScore ?? "—"}/10 · ${forEmail.pipelineStatus}`,
+        audience: "ops",
+        href: stagePath(forEmail.id),
+        entityType: "interview",
+        entityId: null,
+        payload: {
+          sourceSystem: "ai-frontdesk-interviewer",
+          interviewId: forEmail.id,
+          rootId: forEmail.rootId || forEmail.id,
+          kind,
+          recommendation,
+          pipelineStatus: forEmail.pipelineStatus,
+          candidateEmail: c.email,
+          emailCandidateOk: emailCandidate.ok,
+          emailInternalOk: emailInternal.ok,
+        },
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "spine notify failed";
+      console.error("[notifications] spine fan-out", message);
+      spineInApp = { ok: false, error: message };
+    }
+  }
+
+  return { slack, emailCandidate, emailInternal, spineInApp };
 }
 
 /** @deprecated use notifyStageComplete */
