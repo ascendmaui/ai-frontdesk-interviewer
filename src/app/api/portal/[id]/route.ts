@@ -50,7 +50,7 @@ export async function GET(
     pipelineStatus: root.pipelineStatus,
     certification: {
       certified: certification.certified,
-      reasons: certification.reasons,
+      blockers: certification.blockers,
     },
     hearthlineOs: {
       loginUrl: `${osBase}/app`,
