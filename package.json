@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test tests/**/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "db:setup": "node --import tsx scripts/database.ts"
   },
   "dependencies": {
-    "next": "16.2.10",
+    "next": "16.3.4",
     "nodemailer": "^9.0.3",
+    "pg": "8.23.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -19,10 +21,11 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
+    "@types/pg": "8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.9",
     "typescript": "^5"

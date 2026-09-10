@@ -5,9 +5,9 @@
  */
 
 import { provisionToHearthlineOs } from "./hearthline-os";
-import { syncApplicantToSpine } from "./spine-sync";
 import { activateCloserTerritory } from "./platform-store";
 import type { InterviewRecord } from "./types";
+import { certificationCheck } from "./certification";
 
 export async function runProductionReadyEffects(
   root: InterviewRecord,
@@ -18,20 +18,11 @@ export async function runProductionReadyEffects(
   territoryError?: string;
 }> {
   const rootId = root.rootId || root.id;
+  if (!certificationCheck(root).certified) throw new Error("Certification is required before live lead activation.");
   const hearthlineProvision = await provisionToHearthlineOs(root, {
     reassignLeads: opts?.reassignLeads,
     trigger: opts?.trigger,
   });
-
-  // Ensure production_ready always hits spine even if a store hook was missed
-  try {
-    await syncApplicantToSpine({
-      ...root,
-      pipelineStatus: "production_ready",
-    });
-  } catch (e) {
-    console.error("[closer-ready] spine sync", e);
-  }
 
   let territory: Awaited<ReturnType<typeof activateCloserTerritory>> | null =
     null;

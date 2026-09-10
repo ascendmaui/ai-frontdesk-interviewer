@@ -17,14 +17,14 @@ describe("production_ready territory activation (shipped source)", () => {
     assert.match(src, /export async function runProductionReadyEffects/);
   });
 
-  it("train quiz path uses runProductionReadyEffects", () => {
+  it("certification path uses runProductionReadyEffects", () => {
     const src = readFileSync(join(root, "app/api/train/[id]/route.ts"), "utf8");
     assert.match(src, /runProductionReadyEffects/);
-    assert.match(src, /auto_training_complete/);
-    // Must not call provision-only without territory helper
+    assert.match(src, /auto_certification_complete/);
+    // Must not fall back to OS-only provisioning without territory activation.
     assert.doesNotMatch(
       src,
-      /provisionToHearthlineOs\(latest,\s*\{\s*trigger:\s*"auto_training_complete"/,
+      /provisionToHearthlineOs\([^)]*auto_certification_complete/,
     );
   });
 
@@ -50,7 +50,6 @@ describe("portal/train require token (shipped source)", () => {
       "utf8",
     );
     assert.match(src, /portalAuthError/);
-    // Old pattern only checked when token present AND mismatch
     assert.doesNotMatch(
       src,
       /if \(t && root\.portalToken && t !== root\.portalToken\)/,

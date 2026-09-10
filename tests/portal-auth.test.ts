@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  portalAuthError,
-  portalTokenAuthorized,
-} from "../src/lib/portal-auth";
+import { portalAuthError, portalTokenAuthorized } from "../src/lib/portal-auth";
 
 describe("portalTokenAuthorized (shipped)", () => {
   it("rejects missing token when portalToken is set", () => {
@@ -20,9 +17,9 @@ describe("portalTokenAuthorized (shipped)", () => {
     assert.equal(portalTokenAuthorized("secret-token", "secret-token"), true);
   });
 
-  it("allows access when record has no portal token", () => {
-    assert.equal(portalTokenAuthorized("", ""), true);
-    assert.equal(portalTokenAuthorized(undefined, null), true);
+  it("rejects access when record has no portal token", () => {
+    assert.equal(portalTokenAuthorized("", ""), false);
+    assert.equal(portalTokenAuthorized(undefined, null), false);
   });
 });
 

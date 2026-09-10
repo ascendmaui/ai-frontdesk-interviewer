@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import {
+  certificationCheck,
+  CERT_PITCH_PASS,
+  CERT_ROLEPLAY_PASSES,
+} from "@/lib/certification";
+import { runProductionReadyEffects } from "@/lib/closer-ready";
 import { applyDecision } from "@/lib/decision";
 import { evaluateTranscript } from "@/lib/evaluate";
 import { buildHireVerdict } from "@/lib/hire-analysis";
@@ -26,10 +32,11 @@ import {
 import type {
   InterviewRecord,
   PipelineStatus,
+  TrainingState,
   TranscriptLine,
 } from "@/lib/types";
 import { INCOMPLETE_SEC } from "@/lib/types";
-import { runProductionReadyEffects } from "@/lib/closer-ready";
+import { candidateAuthError } from "@/lib/candidate-auth";
 
 export const runtime = "nodejs";
 
@@ -41,6 +48,7 @@ export async function POST(req: Request) {
     multitaskAnswers?: MultitaskAnswer[];
     eventTypes?: string[];
     force?: boolean;
+    token?: string;
   };
   try {
     body = await req.json();
@@ -60,13 +68,13 @@ export async function POST(req: Request) {
   if (!existing) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
   }
+  const access = candidateAuthError(req, existing, body.token);
+  if (access) return access;
 
   const kind = existing.kind || "screening";
-  // Prefer the richer of client vs already-synced transcript
   const clientTx = Array.isArray(body.transcript) ? body.transcript : [];
   const savedTx = existing.transcript || [];
-  const transcript =
-    clientTx.length >= savedTx.length ? clientTx : savedTx;
+  const transcript = clientTx.length >= savedTx.length ? clientTx : savedTx;
   const durationSec =
     typeof body.durationSec === "number"
       ? body.durationSec
@@ -77,7 +85,7 @@ export async function POST(req: Request) {
     multitask = scoreMultitask(body.multitaskAnswers);
   }
 
-  if (existing.status === "completed" && existing.scorecard && !body.force) {
+  if (existing.status === "completed" && existing.scorecard) {
     return NextResponse.json({ interview: existing, cached: true });
   }
 
@@ -102,7 +110,6 @@ export async function POST(req: Request) {
       transcript,
       durationSec,
     });
-    // Align scorecard recommendation with guarded verdict
     scorecard = {
       ...scorecard,
       recommendation: hireVerdict.decision,
@@ -114,7 +121,7 @@ export async function POST(req: Request) {
 
     let pipelineStatus: PipelineStatus = existing.pipelineStatus;
     let hmInterviewId = existing.hmInterviewId;
-    let onboardingInterviewId = existing.onboardingInterviewId;
+    const onboardingInterviewId = existing.onboardingInterviewId;
     let practicePitchSessionId = existing.practicePitchSessionId;
     let offer = existing.offer;
     let setupTasks = existing.setupTasks;
@@ -152,46 +159,60 @@ export async function POST(req: Request) {
       }
     } else if (kind === "practice_pitch") {
       const score = Number(scorecard.overallScore) || 0;
-      const passed = score >= 7;
-      training = {
-        ...(existing.training || { modulesRead: [], quizAttempts: 0 }),
-        practicePitchSessionId: interviewId,
-        practicePitchScore: score,
-        practicePitchPassed: passed,
-      };
+      const passed = !incomplete && score >= CERT_PITCH_PASS;
       const rootId = existing.rootId || existing.parentId || interviewId;
       const root = await getInterview(rootId);
+      const prior: TrainingState = root?.training ||
+        existing.training || { modulesRead: [], quizAttempts: 0 };
+      const roleplayAttempts = (prior.roleplayAttempts || 0) + 1;
+      const roleplayPasses = (prior.roleplayPasses || 0) + (passed ? 1 : 0);
+      const bestPitchScore = Math.max(prior.bestPitchScore || 0, score);
+      const nextTrain: TrainingState = {
+        ...prior,
+        practicePitchSessionId: interviewId,
+        practicePitchScore: score,
+        bestPitchScore,
+        roleplayAttempts,
+        roleplayPasses,
+        practicePitchPassed: roleplayPasses >= CERT_ROLEPLAY_PASSES,
+      };
+      training = nextTrain;
+      practicePitchSessionId = interviewId;
+
       if (root) {
-        const quizOk = root.training?.quizPassed;
-        const modulesOk = (root.training?.modulesRead?.length || 0) >= 3;
-        const nextTrain =
-          quizOk && modulesOk && passed
-            ? {
-                ...training,
-                modulesRead: root.training?.modulesRead || [],
-                quizScore: root.training?.quizScore,
-                quizPassed: root.training?.quizPassed,
-                quizAttempts: root.training?.quizAttempts || 0,
-                completedAt: new Date().toISOString(),
-              }
-            : {
-                ...root.training,
-                ...training,
-              };
-        pipelineStatus =
-          quizOk && modulesOk && passed
-            ? "production_ready"
-            : "training_in_progress";
         await updateInterview(rootId, {
           training: nextTrain,
           practicePitchSessionId: interviewId,
-          pipelineStatus,
+          pipelineStatus:
+            root.pipelineStatus === "production_ready"
+              ? "production_ready"
+              : "training_in_progress",
         });
-        training = nextTrain;
+        const refreshed = (await getInterview(rootId)) || root;
+        const cert = certificationCheck(refreshed);
+        if (cert.certified && refreshed.pipelineStatus !== "production_ready") {
+          training = {
+            ...nextTrain,
+            completedAt: nextTrain.completedAt || new Date().toISOString(),
+          };
+          await updateInterview(rootId, {
+            training,
+            pipelineStatus: "production_ready",
+          });
+          pipelineStatus = "production_ready";
+        } else {
+          pipelineStatus = refreshed.pipelineStatus;
+        }
       }
+
       scorecard = {
         ...scorecard,
         recommendation: passed ? "yes" : "maybe",
+        nextStep: passed
+          ? roleplayPasses >= CERT_ROLEPLAY_PASSES
+            ? "Roleplay gate passed. Complete any remaining certification blockers."
+            : `Pass ${CERT_ROLEPLAY_PASSES - roleplayPasses} more roleplay at ${CERT_PITCH_PASS}/10 or higher.`
+          : `Practice again. Certification requires ${CERT_PITCH_PASS}/10 or higher on ${CERT_ROLEPLAY_PASSES} roleplays.`,
       };
     }
 
@@ -230,6 +251,7 @@ export async function POST(req: Request) {
         ...(onboardingInterviewId ? { onboardingInterviewId } : {}),
         ...(offer ? { offer } : {}),
         ...(setupTasks ? { setupTasks } : {}),
+        ...(kind === "practice_pitch" && training ? { training } : {}),
       });
     } else {
       await updateInterview(rootId, {
@@ -238,6 +260,7 @@ export async function POST(req: Request) {
         pipelineStatus,
         offer,
         setupTasks,
+        ...(training ? { training } : {}),
       });
     }
 
@@ -280,16 +303,15 @@ export async function POST(req: Request) {
         (await updateInterview(interviewId, { notifications })) || interview;
     }
 
-    // When training finishes → production_ready, provision OS + territory
     let hearthlineProvision = null;
     let territory = null;
     const rootAfter = (await getInterview(rootId)) || interview;
-    if (
-      rootAfter.pipelineStatus === "production_ready" ||
-      pipelineStatus === "production_ready"
-    ) {
+    if (rootAfter.pipelineStatus === "production_ready") {
       const effects = await runProductionReadyEffects(rootAfter, {
-        trigger: "auto_practice_pitch_complete",
+        trigger:
+          kind === "practice_pitch"
+            ? "auto_roleplay_certification_complete"
+            : "auto_stage_complete",
       });
       hearthlineProvision = effects.hearthlineProvision;
       territory = effects.territory;
@@ -301,6 +323,8 @@ export async function POST(req: Request) {
         ? { id: childSession.id, kind: childSession.kind }
         : null,
       offerToken: offer?.token,
+      certification:
+        kind === "practice_pitch" ? certificationCheck(rootAfter) : undefined,
       hearthlineProvision,
       territory,
       cached: false,

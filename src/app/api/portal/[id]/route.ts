@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
+import { certificationCheck } from "@/lib/certification";
 import { COMPANY } from "@/lib/company";
 import { pipelineSteps } from "@/lib/pipeline";
-import {
-  listTerritories,
-  upsertTerritory,
-} from "@/lib/platform-store";
+import { listTerritories, upsertTerritory } from "@/lib/platform-store";
 import { portalAuthError } from "@/lib/portal-auth";
 import { getRole } from "@/lib/roles";
 import { setupProgress } from "@/lib/setup-tasks";
 import { getInterview, updateInterview } from "@/lib/store";
-import {
-  AREA_CODE_REGIONS,
-  extractAreaCode,
-} from "@/lib/territories";
+import { AREA_CODE_REGIONS, extractAreaCode } from "@/lib/territories";
 
 export const runtime = "nodejs";
 
@@ -44,7 +39,7 @@ export async function GET(
   const osBase = (
     process.env.HEARTHLINE_OS_URL ||
     process.env.NEXT_PUBLIC_HEARTHLINE_OS_URL ||
-    "https://hearthline-platform.vercel.app"
+    "https://hearthline-gold.vercel.app"
   ).replace(/\/$/, "");
 
   const territories = await listTerritories().catch(() => []);
@@ -65,8 +60,7 @@ export async function GET(
       jobKitUrl: `${osBase}/os/job-kit`,
       dashboardUrl: `${osBase}/os`,
       playbookUrl: `${osBase}/os/playbook`,
-      note:
-        "Sign in with the same Google email you applied with. Your seat, leads, and job kit unlock after production ready.",
+      note: "Sign in with the same Google email you applied with. Your seat, leads, and job kit unlock after production ready.",
     },
     steps: pipelineSteps(root.pipelineStatus),
     candidate: {
@@ -189,7 +183,9 @@ export async function PATCH(
         roleSlug: root.roleSlug,
         areaCodes,
         states,
-        active: true,
+        active:
+          certificationCheck(root).certified &&
+          root.pipelineStatus === "production_ready",
       });
       return NextResponse.json({
         ok: true,

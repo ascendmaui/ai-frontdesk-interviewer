@@ -30,7 +30,13 @@ type Meta = {
   enableMultitaskQuiz?: boolean;
 };
 
-export function InterviewRoom({ interviewId }: { interviewId: string }) {
+export function InterviewRoom({
+  interviewId,
+  token,
+}: {
+  interviewId: string;
+  token: string;
+}) {
   const router = useRouter();
   const [meta, setMeta] = useState<Meta | null>(null);
   const [phase, setPhase] = useState<"ready" | "live" | "finishing">("ready");
@@ -46,9 +52,8 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
   // Multitask quiz
   const [quizQueue, setQuizQueue] = useState<MultitaskQuestion[]>([]);
   const [quizIndex, setQuizIndex] = useState(-1);
-  const [activeQuestion, setActiveQuestion] = useState<MultitaskQuestion | null>(
-    null,
-  );
+  const [activeQuestion, setActiveQuestion] =
+    useState<MultitaskQuestion | null>(null);
   const [multitaskAnswers, setMultitaskAnswers] = useState<MultitaskAnswer[]>(
     [],
   );
@@ -72,6 +77,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          token,
           transcript: transcriptRef.current,
           durationSec,
           multitaskAnswers: multitaskRef.current,
@@ -82,7 +88,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     } catch {
       /* best-effort */
     }
-  }, [interviewId]);
+  }, [interviewId, token]);
 
   const kind = meta?.kind || "screening";
   const agentName =
@@ -104,7 +110,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
   }, [multitaskAnswers]);
 
   useEffect(() => {
-    fetch(`/api/interview/${interviewId}`)
+    fetch(`/api/interview/${interviewId}?t=${encodeURIComponent(token)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
@@ -123,7 +129,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         }
       })
       .catch(() => setError("Could not load interview"));
-  }, [interviewId, router]);
+  }, [interviewId, router, token]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -232,6 +238,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            token,
             transcript: finalTranscript,
             durationSec,
             multitaskAnswers: multitaskRef.current,
@@ -249,6 +256,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             interviewId,
+            token,
             transcript: finalTranscript,
             durationSec,
             multitaskAnswers: multitaskRef.current,
@@ -258,7 +266,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Could not finalize");
-        router.replace(`/done/${interviewId}`);
+        router.replace(`/done/${interviewId}?t=${encodeURIComponent(token)}`);
       } catch (e) {
         setError(
           e instanceof Error
@@ -270,7 +278,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         if (fromStatus) setStatus(fromStatus);
       }
     },
-    [clearQuizTimers, elapsed, interviewId, router],
+    [clearQuizTimers, elapsed, interviewId, router, token],
   );
 
   const start = useCallback(async () => {
@@ -312,13 +320,13 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
 
     try {
       await session.unlockAudio();
-      await session.start(interviewId);
+      await session.start(interviewId, token);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not start");
       setPhase("ready");
       setStatus("error");
     }
-  }, [finish, interviewId, isScreening, quizQueue, scheduleQuiz]);
+  }, [finish, interviewId, isScreening, quizQueue, scheduleQuiz, token]);
 
   const toggleMute = () => {
     const next = !muted;
@@ -335,7 +343,8 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
   const readyCopy = useMemo(() => {
     if (kind === "hiring_manager") {
       return {
-        title: `Hiring manager round, ${meta?.candidate?.firstName || ""}`.trim(),
+        title:
+          `Hiring manager round, ${meta?.candidate?.firstName || ""}`.trim(),
         body: `You'll speak with ${agentName} (~10–12 min) — senior hiring manager voice. Deeper dive on how you'd run the seat day to day.`,
         bullets: [
           "No pop-up quiz this round — focus on the conversation",
@@ -378,15 +387,19 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         `Voice: ${meta?.agentTone || "warm, professional"}`,
       ],
     };
-  }, [agentName, kind, meta?.candidate?.firstName, meta?.agentTone, meta?.roleTitle]);
+  }, [
+    agentName,
+    kind,
+    meta?.candidate?.firstName,
+    meta?.agentTone,
+    meta?.roleTitle,
+  ]);
 
   if (phase === "finishing") {
     return (
       <div className="flex min-h-[70dvh] flex-col items-center justify-center text-center animate-rise">
         <div className="animate-spin-accent h-10 w-10 rounded-full border-2 border-[rgba(186,91,51,0.2)] border-t-[var(--accent)]" />
-        <p className="hl-serif mt-5 text-2xl text-[var(--ink)]">
-          Wrapping up…
-        </p>
+        <p className="hl-serif mt-5 text-2xl text-[var(--ink)]">Wrapping up…</p>
         <p className="mt-2 max-w-xs text-sm leading-relaxed text-[var(--ink-muted)]">
           Scoring your session
           {isScreening ? " and multitask answers" : ""}, then routing next
@@ -403,9 +416,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
           <p className="text-3xl">{meta?.roleEmoji || "🎙️"}</p>
           <h1 className="hl-serif mt-2 text-[1.75rem] text-[var(--ink)] sm:text-[2rem]">
             {readyCopy.title}
-            {meta?.candidate?.firstName
-              ? `, ${meta.candidate.firstName}`
-              : ""}
+            {meta?.candidate?.firstName ? `, ${meta.candidate.firstName}` : ""}
           </h1>
           <p className="mt-2.5 text-[14.5px] leading-relaxed text-[var(--ink-muted)]">
             {readyCopy.body}
@@ -577,7 +588,9 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
       {showTranscript && (
         <div className="max-h-[40dvh] space-y-2.5 overflow-y-auto rounded-[20px] border border-[var(--line)] bg-white/50 p-3.5">
           {transcript.length === 0 && (
-            <p className="text-sm text-[var(--ink-faint)]">Waiting for speech…</p>
+            <p className="text-sm text-[var(--ink-faint)]">
+              Waiting for speech…
+            </p>
           )}
           {transcript.map((line) => (
             <Bubble key={line.id} line={line} agentName={agentName} />
@@ -588,6 +601,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
 
       {isScreening && (
         <MultitaskOverlay
+          key={activeQuestion?.id || "inactive"}
           question={activeQuestion}
           index={Math.max(0, quizIndex)}
           total={quizQueue.length || 1}

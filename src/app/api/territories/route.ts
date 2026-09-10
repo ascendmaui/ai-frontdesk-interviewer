@@ -35,7 +35,9 @@ export async function POST(req: Request) {
   }
 
   const closerName = String(body.closerName || "").trim();
-  const email = String(body.email || "").trim().toLowerCase();
+  const email = String(body.email || "")
+    .trim()
+    .toLowerCase();
   const phone = String(body.phone || "").trim();
   if (!closerName || !email) {
     return NextResponse.json(
@@ -45,7 +47,9 @@ export async function POST(req: Request) {
   }
 
   let areaCodes = Array.isArray(body.areaCodes)
-    ? body.areaCodes.map((c) => String(c).replace(/\D/g, "").slice(0, 3)).filter(Boolean)
+    ? body.areaCodes
+        .map((c) => String(c).replace(/\D/g, "").slice(0, 3))
+        .filter(Boolean)
     : [];
 
   if (body.usePhoneAreaCode !== false && phone) {
@@ -63,8 +67,7 @@ export async function POST(req: Request) {
   }
 
   const closerId =
-    body.closerId ||
-    `closer_${email.replace(/[^a-z0-9]/gi, "_").slice(0, 40)}`;
+    body.closerId || `closer_${email.replace(/[^a-z0-9]/gi, "_").slice(0, 40)}`;
 
   try {
     const row = await upsertTerritory({

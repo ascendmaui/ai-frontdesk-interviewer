@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { AdminNav } from "@/components/AdminNav";
 import {
   FLOWS,
@@ -31,11 +31,6 @@ export function SystemsClient() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    const s = sessionStorage.getItem("af_admin_secret");
-    if (s) setSecret(s);
-  }, []);
-
   const runSlackSetup = useCallback(async () => {
     if (!secret) {
       setMsg("Enter admin secret first");
@@ -44,7 +39,6 @@ export function SystemsClient() {
     setBusy(true);
     setMsg(null);
     try {
-      sessionStorage.setItem("af_admin_secret", secret);
       const res = await fetch("/api/slack/setup", {
         method: "POST",
         headers: authHeaders(secret),
@@ -136,20 +130,28 @@ export function SystemsClient() {
       </section>
 
       {/* Pipeline diagrams */}
-      <PipelineSection title="Hiring pipeline" steps={HIRING_FUNNEL} id="hiring" />
+      <PipelineSection
+        title="Hiring pipeline"
+        steps={HIRING_FUNNEL}
+        id="hiring"
+      />
       <PipelineSection
         title="Marketing → lead gen pipeline"
         steps={MARKETING_FUNNEL}
         id="marketing"
       />
-      <PipelineSection title="Sales closer pipeline" steps={SALES_FUNNEL} id="sales" />
+      <PipelineSection
+        title="Sales closer pipeline"
+        steps={SALES_FUNNEL}
+        id="sales"
+      />
 
       {/* Agent roster */}
       <section className="hl-card p-5">
         <h2 className="hl-serif text-xl text-[var(--ink)]">Voice agents</h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          Distinct names + Grok voices so candidates never confuse who they&apos;re
-          talking to
+          Distinct names + Grok voices so candidates never confuse who
+          they&apos;re talking to
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {(
@@ -162,7 +164,9 @@ export function SystemsClient() {
               key={kind}
               className="rounded-2xl border border-[var(--line)] bg-white/50 px-3.5 py-3"
             >
-              <p className="hl-serif text-lg text-[var(--ink)]">{p.agentName}</p>
+              <p className="hl-serif text-lg text-[var(--ink)]">
+                {p.agentName}
+              </p>
               <p className="text-sm text-[var(--ink-muted)]">{p.title}</p>
               <p className="mt-1 text-[12px] text-[var(--ink-faint)]">
                 Voice ID: <code>{p.voice}</code> · {p.tone}
@@ -178,7 +182,9 @@ export function SystemsClient() {
       {/* Slack setup */}
       <section className="hl-card space-y-4 p-5" id="slack">
         <div>
-          <h2 className="hl-serif text-xl text-[var(--ink)]">Slack workspace</h2>
+          <h2 className="hl-serif text-xl text-[var(--ink)]">
+            Slack workspace
+          </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             Create standard channels and verify bot/webhook env. Requires{" "}
             <code className="text-[12px]">SLACK_BOT_TOKEN</code> with

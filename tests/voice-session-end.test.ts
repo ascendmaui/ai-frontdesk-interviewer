@@ -5,9 +5,7 @@ import { looksLikeSessionEnd } from "../src/lib/voice-session";
 describe("looksLikeSessionEnd (shipped voice-session)", () => {
   it("detects screening close phrase", () => {
     assert.equal(
-      looksLikeSessionEnd(
-        "Thanks for your time. The interview is complete.",
-      ),
+      looksLikeSessionEnd("Thanks for your time. The interview is complete."),
       true,
     );
   });
@@ -22,10 +20,7 @@ describe("looksLikeSessionEnd (shipped voice-session)", () => {
   });
 
   it("detects onboarding close", () => {
-    assert.equal(
-      looksLikeSessionEnd("Onboarding guidance is complete."),
-      true,
-    );
+    assert.equal(looksLikeSessionEnd("Onboarding guidance is complete."), true);
   });
 
   it("detects practice pitch close", () => {
@@ -33,13 +28,18 @@ describe("looksLikeSessionEnd (shipped voice-session)", () => {
   });
 
   it("detects wrap-up variants", () => {
-    assert.equal(looksLikeSessionEnd("That wraps up our conversation today."), true);
+    assert.equal(
+      looksLikeSessionEnd("That wraps up our conversation today."),
+      true,
+    );
     assert.equal(looksLikeSessionEnd("Thank you for your time today."), true);
   });
 
   it("does not false-positive mid-interview chatter", () => {
     assert.equal(
-      looksLikeSessionEnd("Tell me about a complete sale you closed last quarter."),
+      looksLikeSessionEnd(
+        "Tell me about a complete sale you closed last quarter.",
+      ),
       false,
     );
     assert.equal(

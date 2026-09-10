@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { voiceForKind } from "@/lib/agent-voices";
 import { getRole } from "@/lib/roles";
 import { getInterview } from "@/lib/store";
+import { candidateAuthError } from "@/lib/candidate-auth";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
  * Omits scores/transcripts; includes agent identity for correct UI.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
@@ -18,6 +19,8 @@ export async function GET(
   if (!interview) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const access = candidateAuthError(req, interview);
+  if (access) return access;
 
   const role = getRole(interview.roleSlug);
   const kind = interview.kind || "screening";
@@ -28,8 +31,7 @@ export async function GET(
     Boolean(interview.scorecard);
 
   const rootId = interview.rootId || interview.id;
-  const root =
-    rootId !== interview.id ? await getInterview(rootId) : interview;
+  const root = rootId !== interview.id ? await getInterview(rootId) : interview;
 
   return NextResponse.json({
     id: interview.id,

@@ -166,7 +166,7 @@ export class VoiceSession {
     }
   }
 
-  async start(interviewId: string) {
+  async start(interviewId: string, candidateToken: string) {
     if (this.ws) return;
     this.closed = false;
     this.handlers.onStatus?.("connecting");
@@ -186,7 +186,7 @@ export class VoiceSession {
         fetch("/api/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ interviewId }),
+          body: JSON.stringify({ interviewId, token: candidateToken }),
         }),
       ]);
 

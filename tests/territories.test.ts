@@ -8,7 +8,8 @@ import {
 } from "../src/lib/territories";
 
 function closer(
-  partial: Partial<TerritoryAssignment> & Pick<TerritoryAssignment, "closerId" | "areaCodes">,
+  partial: Partial<TerritoryAssignment> &
+    Pick<TerritoryAssignment, "closerId" | "areaCodes">,
 ): TerritoryAssignment {
   return {
     closerName: partial.closerName || "Test Closer",
@@ -88,10 +89,9 @@ describe("matchCloserForLead (shipped matcher)", () => {
   });
 
   it("ignores inactive closers", () => {
-    const m = matchCloserForLead(
-      { areaCode: "864", roleSlug: "hvac-closer" },
-      [pool[2]],
-    );
+    const m = matchCloserForLead({ areaCode: "864", roleSlug: "hvac-closer" }, [
+      pool[2],
+    ]);
     assert.equal(m, null);
   });
 
