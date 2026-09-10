@@ -1,6 +1,6 @@
 /**
  * Provision hires into Hearthline OS (shared pipeline + Google team allowlist).
- * https://hearthline-gold.vercel.app/os
+ * https://hearthline-platform.vercel.app (control-plane spine; /api/os/provision shim)
  */
 
 import type { InterviewRecord } from "./types";
@@ -25,7 +25,7 @@ function osBase(): string {
   return (
     process.env.HEARTHLINE_OS_URL ||
     process.env.NEXT_PUBLIC_HEARTHLINE_OS_URL ||
-    "https://hearthline-gold.vercel.app"
+    "https://hearthline-platform.vercel.app"
   ).replace(/\/$/, "");
 }
 
@@ -99,7 +99,6 @@ export async function provisionToHearthlineOs(
 export function shouldProvisionOnStatus(status: string): boolean {
   return status === "production_ready";
 }
-
 
 export function describeProvisionMode(trigger?: string): "auto" | "manual" | "unknown" {
   if (!trigger) return "unknown";
