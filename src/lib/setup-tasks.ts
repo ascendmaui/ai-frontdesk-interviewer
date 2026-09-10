@@ -2,6 +2,7 @@ import type { SetupTask } from "./types";
 
 export function buildSetupTasks(): SetupTask[] {
   const packetUrl = "/documents/closer-packet";
+  const hearthlineBase = (process.env.HEARTHLINE_OS_URL || "https://hearthline-platform.vercel.app").replace(/\/$/, "");
   return [
     {
       id: "commission-agreement",
@@ -63,11 +64,8 @@ export function buildSetupTasks(): SetupTask[] {
       id: "hearthline-os",
       title: "Sign in to Hearthline OS",
       description:
-        "Use the same Google email you applied with. After certification, your seat unlocks live leads + job kit.",
-      href:
-        process.env.HEARTHLINE_OS_URL
-          ? `${process.env.HEARTHLINE_OS_URL.replace(/\/$/, "")}/os/login`
-          : "https://hearthline-gold.vercel.app/os/login",
+        "Use the same Google email you applied with. After certification, your seat unlocks live leads and your job kit.",
+      href: `${hearthlineBase}/app`,
       required: true,
     },
     {
@@ -75,9 +73,7 @@ export function buildSetupTasks(): SetupTask[] {
       title: "Confirm CRM access",
       description:
         "Log in to CRM and open your pipeline board. If you cannot log in, contact operations before handling live leads.",
-      href:
-        process.env.ONBOARDING_CRM_URL ||
-        "https://hearthline-gold.vercel.app/os",
+      href: process.env.ONBOARDING_CRM_URL || `${hearthlineBase}/app`,
       required: true,
     },
     {
@@ -91,7 +87,8 @@ export function buildSetupTasks(): SetupTask[] {
     {
       id: "calendar",
       title: "Connect calendar for demos",
-      description: "Ensure your booking calendar is available for qualified discovery/demo calls.",
+      description:
+        "Ensure your booking calendar is available for qualified discovery/demo calls.",
       href: process.env.FINAL_INTERVIEW_CALENDAR_URL || undefined,
       required: false,
     },
