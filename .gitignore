@@ -43,3 +43,5 @@ next-env.d.ts
 
 # interview data
 /data/interviews.json
+/data/development-state.json
+/data/*.tmp

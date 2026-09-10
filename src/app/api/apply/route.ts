@@ -52,17 +52,28 @@ export async function POST(req: Request) {
   }
 
   const candidate: CandidateApplication = {
-    firstName: String(body.firstName || "").trim().slice(0, 60),
-    lastName: String(body.lastName || "").trim().slice(0, 60),
-    email: String(body.email || "").trim().toLowerCase().slice(0, 120),
-    phone: String(body.phone || "").trim().slice(0, 40),
+    firstName: String(body.firstName || "")
+      .trim()
+      .slice(0, 60),
+    lastName: String(body.lastName || "")
+      .trim()
+      .slice(0, 60),
+    email: String(body.email || "")
+      .trim()
+      .toLowerCase()
+      .slice(0, 120),
+    phone: String(body.phone || "")
+      .trim()
+      .slice(0, 40),
     yearsInSales: String(body.yearsInSales || "").slice(0, 40),
     industryExperience: (["yes", "some", "no", ""].includes(
       String(body.industryExperience || ""),
     )
       ? String(body.industryExperience || "")
       : "") as CandidateApplication["industryExperience"],
-    linkedin: String(body.linkedin || "").trim().slice(0, 200),
+    linkedin: String(body.linkedin || "")
+      .trim()
+      .slice(0, 200),
     consent: Boolean(body.consent),
     utmSource: String(body.utmSource || "").slice(0, 80),
     utmMedium: String(body.utmMedium || "").slice(0, 80),
@@ -77,7 +88,10 @@ export async function POST(req: Request) {
     );
   }
   if (!validEmail(candidate.email)) {
-    return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Valid email is required" },
+      { status: 400 },
+    );
   }
   if (candidate.phone.replace(/\D/g, "").length < 7) {
     return NextResponse.json(
@@ -114,7 +128,7 @@ export async function POST(req: Request) {
     id: record.id,
     roleSlug: record.roleSlug,
     portalToken: record.portalToken,
-    interviewPath: `/interview/${record.id}`,
+    interviewPath: `/interview/${record.id}?t=${record.portalToken}`,
     portalPath: `/portal/${record.id}?t=${record.portalToken}`,
   });
 }

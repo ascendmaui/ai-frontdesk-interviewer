@@ -7,6 +7,7 @@ import {
   greetingForRole,
 } from "@/lib/roles";
 import { getInterview, updateInterview } from "@/lib/store";
+import { candidateAuthError } from "@/lib/candidate-auth";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { interviewId?: string } = {};
+  let body: { interviewId?: string; token?: string } = {};
   try {
     body = await req.json();
   } catch {
@@ -41,6 +42,8 @@ export async function POST(req: Request) {
   if (!interview) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
   }
+  const access = candidateAuthError(req, interview, body.token);
+  if (access) return access;
 
   if (interview.status === "completed") {
     return NextResponse.json(

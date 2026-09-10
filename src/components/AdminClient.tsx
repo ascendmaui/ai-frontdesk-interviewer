@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { AdminNav } from "@/components/AdminNav";
 import { REC_EMOJI, REC_LABEL, type Recommendation } from "@/lib/company";
 import {
@@ -173,20 +173,12 @@ export function AdminClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unauthorized");
       setRows(data.interviews || []);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("af_admin_secret", secret);
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
       setLoading(false);
     }
   }, [secret]);
-
-  useEffect(() => {
-    const s = sessionStorage.getItem("af_admin_secret");
-    if (s) setSecret(s);
-  }, []);
 
   async function openDetail(id: string) {
     setDetailLoading(true);
@@ -225,7 +217,8 @@ export function AdminClient() {
         return;
       }
       const prov = j.hearthlineProvision;
-      if (prov?.error) setMsg(`✓ ${j.message || actionName} · OS: ${prov.error}`);
+      if (prov?.error)
+        setMsg(`✓ ${j.message || actionName} · OS: ${prov.error}`);
       else if (prov?.email)
         setMsg(
           `✓ ${j.message || actionName} · OS: ${prov.positionTitle} · ${prov.assignedLeads?.length || 0} leads → ${prov.email}`,
@@ -273,8 +266,7 @@ export function AdminClient() {
           <div>
             <p className="hl-eyebrow">Review</p>
             <h1 className="hl-serif text-[1.85rem] text-[var(--ink)]">
-              {app.roleEmoji} {app.candidate.firstName}{" "}
-              {app.candidate.lastName}
+              {app.roleEmoji} {app.candidate.firstName} {app.candidate.lastName}
             </h1>
             <p className="mt-1 text-sm text-[var(--ink-muted)]">
               {app.roleTitle} · {app.pipelineStatus?.replace(/_/g, " ")}
@@ -288,8 +280,7 @@ export function AdminClient() {
               <span className="text-base text-[var(--ink-faint)]">/10</span>
             </p>
             <p className="text-sm font-medium text-[var(--accent)]">
-              {REC_EMOJI[rec]}{" "}
-              {app.hireVerdict?.label || REC_LABEL[rec] || rec}
+              {REC_EMOJI[rec]} {app.hireVerdict?.label || REC_LABEL[rec] || rec}
             </p>
           </div>
         </div>
@@ -399,7 +390,11 @@ export function AdminClient() {
           <p>
             <span className="text-[var(--ink-faint)]">UTM</span>
             <br />
-            {[app.candidate.utmSource, app.candidate.utmMedium, app.candidate.utmCampaign]
+            {[
+              app.candidate.utmSource,
+              app.candidate.utmMedium,
+              app.candidate.utmCampaign,
+            ]
               .filter(Boolean)
               .join(" / ") || "—"}
           </p>
@@ -433,7 +428,10 @@ export function AdminClient() {
                 ["send_offer", "Create offer"],
                 ["force_onboarding", "Start onboarding"],
                 ["unlock_training", "Unlock training"],
-                ["production_ready", "MANUAL · Mark production ready (+ OS provision)"],
+                [
+                  "production_ready",
+                  "MANUAL · Mark production ready (+ OS provision)",
+                ],
                 ["provision_hearthline", "MANUAL · Provision → Hearthline OS"],
                 // AUTO: training complete / practice pitch pass (no button)
                 ["reject", "Reject"],
@@ -457,10 +455,13 @@ export function AdminClient() {
             ))}
           </div>
           <p className="text-xs leading-relaxed text-[var(--ink-faint)]">
-            <strong className="text-[var(--ink-soft)]">AUTO vs MANUAL OS provision:</strong>{" "}
-            AUTO fires when training completes (quiz + modules + practice pitch) or practice pitch
-            complete sets <code>production_ready</code> — no button needed. MANUAL buttons re-run
-            provision with lead reassignment. Candidate then signs into Hearthline OS with the same
+            <strong className="text-[var(--ink-soft)]">
+              AUTO vs MANUAL OS provision:
+            </strong>{" "}
+            AUTO fires when training completes (quiz + modules + practice pitch)
+            or practice pitch complete sets <code>production_ready</code> — no
+            button needed. MANUAL buttons re-run provision with lead
+            reassignment. Candidate then signs into Hearthline OS with the same
             Google email.
           </p>
           {msg && (
@@ -573,7 +574,9 @@ export function AdminClient() {
             });
             return (
               <>
-                <p className="hl-serif text-lg text-[var(--ink)]">{band.label}</p>
+                <p className="hl-serif text-lg text-[var(--ink)]">
+                  {band.label}
+                </p>
                 <ul className="space-y-1.5 text-sm text-[var(--ink-soft)]">
                   {explanations.map((line) => (
                     <li key={line}>· {line}</li>
@@ -615,7 +618,9 @@ export function AdminClient() {
                         <p className="font-semibold text-[var(--ink)]">
                           {b.label}
                         </p>
-                        <p className="mt-1 text-[var(--ink-muted)]">{b.meaning}</p>
+                        <p className="mt-1 text-[var(--ink-muted)]">
+                          {b.meaning}
+                        </p>
                         <p className="mt-1 text-[var(--accent)]">{b.advance}</p>
                       </div>
                     ))}
@@ -699,9 +704,7 @@ export function AdminClient() {
         <button
           type="button"
           disabled={!!busyAction}
-          onClick={() =>
-            void action("", "create_test_user", "hvac-closer")
-          }
+          onClick={() => void action("", "create_test_user", "hvac-closer")}
           className="hl-btn-secondary w-full text-sm"
         >
           {busyAction === "create_test_user"
@@ -712,7 +715,9 @@ export function AdminClient() {
       {msg && !detail && (
         <p
           className={`text-sm ${
-            msg.startsWith("❌") ? "text-[var(--danger)]" : "text-[var(--success)]"
+            msg.startsWith("❌")
+              ? "text-[var(--danger)]"
+              : "text-[var(--success)]"
           }`}
         >
           {msg}
@@ -904,22 +909,23 @@ function SessionReview({ session }: { session: SessionDetail }) {
         </div>
       )}
 
-      {session.multitaskQuiz && (session.multitaskQuiz.scoredCount || 0) > 0 && (
-        <div className="rounded-xl border border-[var(--line)] bg-white/50 p-3 text-sm">
-          <p className="font-semibold text-[var(--ink)]">Multitask pop-ups</p>
-          <p className="text-[var(--ink-muted)]">
-            {session.multitaskQuiz.correctCount}/
-            {session.multitaskQuiz.scoredCount} correct · score{" "}
-            {session.multitaskQuiz.multitaskScore}/10
-            {session.multitaskQuiz.skippedCount
-              ? ` · ${session.multitaskQuiz.skippedCount} timed out`
-              : ""}
-            {session.multitaskQuiz.avgResponseMs
-              ? ` · avg ${Math.round(session.multitaskQuiz.avgResponseMs / 1000)}s`
-              : ""}
-          </p>
-        </div>
-      )}
+      {session.multitaskQuiz &&
+        (session.multitaskQuiz.scoredCount || 0) > 0 && (
+          <div className="rounded-xl border border-[var(--line)] bg-white/50 p-3 text-sm">
+            <p className="font-semibold text-[var(--ink)]">Multitask pop-ups</p>
+            <p className="text-[var(--ink-muted)]">
+              {session.multitaskQuiz.correctCount}/
+              {session.multitaskQuiz.scoredCount} correct · score{" "}
+              {session.multitaskQuiz.multitaskScore}/10
+              {session.multitaskQuiz.skippedCount
+                ? ` · ${session.multitaskQuiz.skippedCount} timed out`
+                : ""}
+              {session.multitaskQuiz.avgResponseMs
+                ? ` · avg ${Math.round(session.multitaskQuiz.avgResponseMs / 1000)}s`
+                : ""}
+            </p>
+          </div>
+        )}
 
       <div>
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">

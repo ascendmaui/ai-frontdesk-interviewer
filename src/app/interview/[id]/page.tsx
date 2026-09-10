@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CandidateShell } from "@/components/CandidateShell";
 import { InterviewRoom } from "@/components/InterviewRoom";
 import type { ProcessStepId } from "@/lib/process-steps";
@@ -10,6 +11,7 @@ export default function InterviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const token = useSearchParams().get("t") || "";
   const [id, setId] = useState("");
   const [meta, setMeta] = useState<{
     kind?: string;
@@ -25,14 +27,14 @@ export default function InterviewPage({
   useEffect(() => {
     void params.then((p) => {
       setId(p.id);
-      fetch(`/api/interview/${p.id}`)
+      fetch(`/api/interview/${p.id}?t=${encodeURIComponent(token)}`)
         .then((r) => r.json())
         .then((d) => {
           if (!d.error) setMeta(d);
         })
         .catch(() => null);
     });
-  }, [params]);
+  }, [params, token]);
 
   if (!id) {
     return (
@@ -60,7 +62,7 @@ export default function InterviewPage({
       activePage={activePage}
       activeKind={kind}
     >
-      <InterviewRoom interviewId={id} />
+      <InterviewRoom interviewId={id} token={token} />
     </CandidateShell>
   );
 }

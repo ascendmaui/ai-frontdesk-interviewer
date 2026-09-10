@@ -3,6 +3,7 @@ import { getInterview, updateInterview } from "@/lib/store";
 import type { TranscriptLine } from "@/lib/types";
 import type { MultitaskAnswer } from "@/lib/multitask-quiz";
 import { scoreMultitask } from "@/lib/multitask-quiz";
+import { candidateAuthError } from "@/lib/candidate-auth";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,7 @@ export async function POST(
     durationSec?: number;
     multitaskAnswers?: MultitaskAnswer[];
     eventLog?: string[];
+    token?: string;
   };
   try {
     body = await req.json();
@@ -31,12 +33,13 @@ export async function POST(
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const access = candidateAuthError(req, existing, body.token);
+  if (access) return access;
 
   // Don't clobber a fully completed scored interview unless transcript is richer
   const incoming = Array.isArray(body.transcript) ? body.transcript : [];
   const current = existing.transcript || [];
-  const useTranscript =
-    incoming.length >= current.length ? incoming : current;
+  const useTranscript = incoming.length >= current.length ? incoming : current;
 
   const patch: Record<string, unknown> = {
     transcript: useTranscript,

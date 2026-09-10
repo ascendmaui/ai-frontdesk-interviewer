@@ -9,7 +9,7 @@ export function portalTokenAuthorized(
   expected: string | null | undefined,
 ): boolean {
   const exp = (expected || "").trim();
-  if (!exp) return true; // no token configured on record
+  if (!exp) return false; // Unmigrated records must never grant anonymous access.
   const got = (provided || "").trim();
   return got.length > 0 && got === exp;
 }

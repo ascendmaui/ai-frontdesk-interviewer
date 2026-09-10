@@ -19,13 +19,19 @@ type DoneMeta = {
  * Candidate-facing completion screen.
  * Never shows scores or recommendations. Routes to the next unlocked funnel step.
  */
-export function DoneView({ interviewId }: { interviewId: string }) {
+export function DoneView({
+  interviewId,
+  token,
+}: {
+  interviewId: string;
+  token: string;
+}) {
   const [meta, setMeta] = useState<DoneMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/interview/${interviewId}`)
+    fetch(`/api/interview/${interviewId}?t=${encodeURIComponent(token)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
@@ -48,7 +54,7 @@ export function DoneView({ interviewId }: { interviewId: string }) {
         setError("Could not load confirmation");
         setLoaded(true);
       });
-  }, [interviewId]);
+  }, [interviewId, token]);
 
   if (!loaded) {
     return (
@@ -125,7 +131,10 @@ export function DoneView({ interviewId }: { interviewId: string }) {
         Questions? Reply to any hiring email you receive.
       </p>
 
-      <Link href="/" className="hl-btn-secondary inline-flex w-full justify-center">
+      <Link
+        href="/"
+        className="hl-btn-secondary inline-flex w-full justify-center"
+      >
         Back to careers
       </Link>
     </div>
@@ -154,14 +163,11 @@ function nextStepCta(meta: DoneMeta | null): {
   if (!meta) return null;
   const s = meta.pipelineStatus;
 
-  if (
-    (s === "hm_invited" || s === "hm_in_progress") &&
-    meta.hmInterviewId
-  ) {
+  if ((s === "hm_invited" || s === "hm_in_progress") && meta.hmInterviewId) {
     return {
       title: "Hiring manager with Morgan",
       body: "You advanced to the next round. Start when you're ready — about 10–12 minutes.",
-      href: `/interview/${meta.hmInterviewId}`,
+      href: `/interview/${meta.hmInterviewId}?t=${encodeURIComponent(meta.portalToken || "")}`,
       cta: "Start hiring manager interview",
     };
   }
@@ -182,7 +188,7 @@ function nextStepCta(meta: DoneMeta | null): {
     return {
       title: "Onboarding with Riley",
       body: "Walk through Slack, CRM, and your first 48 hours.",
-      href: `/interview/${meta.onboardingInterviewId}`,
+      href: `/interview/${meta.onboardingInterviewId}?t=${encodeURIComponent(meta.portalToken || "")}`,
       cta: "Start onboarding",
     };
   }
@@ -209,7 +215,9 @@ function nextStepCta(meta: DoneMeta | null): {
   ) {
     return {
       title:
-        s === "production_ready" ? "You're production ready" : "Industry academy",
+        s === "production_ready"
+          ? "You're production ready"
+          : "Industry academy",
       body:
         s === "production_ready"
           ? "Your seat is live. Check portal for territory and OS access."

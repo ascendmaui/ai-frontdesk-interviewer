@@ -111,7 +111,7 @@ export function isStepUnlocked(
 ): boolean {
   const s = status || "applied";
   const order = PROCESS_STEPS.map((x) => x.id);
-  const idx = order.indexOf(stepId);
+  void order;
 
   const reached: Record<ProcessStepId, boolean> = {
     apply: true,

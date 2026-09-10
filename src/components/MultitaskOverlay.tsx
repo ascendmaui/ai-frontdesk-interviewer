@@ -16,17 +16,15 @@ type Props = {
  * Auto-skips on timeout to keep pressure realistic.
  */
 export function MultitaskOverlay({ question, index, total, onAnswer }: Props) {
-  const [secondsLeft, setSecondsLeft] = useState(18);
-  const shownAt = useRef<number>(Date.now());
+  const timeout = question?.timeoutSec ?? 18;
+  const [secondsLeft, setSecondsLeft] = useState(timeout);
+  const shownAt = useRef<number>(0);
   const answered = useRef(false);
 
   useEffect(() => {
     if (!question) return;
     answered.current = false;
     shownAt.current = Date.now();
-    const timeout = question.timeoutSec ?? 18;
-    setSecondsLeft(timeout);
-
     const tick = window.setInterval(() => {
       setSecondsLeft((s) => Math.max(0, s - 1));
     }, 1000);
@@ -50,7 +48,7 @@ export function MultitaskOverlay({ question, index, total, onAnswer }: Props) {
       clearInterval(tick);
       clearTimeout(auto);
     };
-  }, [question, onAnswer]);
+  }, [question, onAnswer, timeout]);
 
   if (!question) return null;
 

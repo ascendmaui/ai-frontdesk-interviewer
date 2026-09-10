@@ -46,6 +46,7 @@ describe("screeningOutcome (shipped pipeline)", () => {
       asked: 4,
       scoredCount: 4,
       correctCount: 0,
+      incorrectCount: 4,
       skippedCount: 0,
       accuracy: 0,
       multitaskScore: 2,
@@ -82,9 +83,6 @@ describe("onboardingOutcome (shipped pipeline)", () => {
   });
 
   it("flags incomplete when score very low", () => {
-    assert.equal(
-      onboardingOutcome(sc("maybe", 2)),
-      "onboarding_incomplete",
-    );
+    assert.equal(onboardingOutcome(sc("maybe", 2)), "onboarding_incomplete");
   });
 });

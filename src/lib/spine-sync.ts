@@ -29,22 +29,17 @@ function spineSecret(): string | undefined {
   );
 }
 
-/** Map Interviewer record → ApplicantSyncInput and POST /api/spine/applicants/sync */
 export async function syncApplicantToSpine(
   interview: InterviewRecord,
 ): Promise<SpineSyncResult> {
   const secret = spineSecret();
   if (!secret) {
-    console.warn(
-      "[spine-sync] HEARTHLINE_SPINE_SECRET not set — skip spine sync",
-    );
+    console.warn("[spine-sync] HEARTHLINE_SPINE_SECRET not set — skip spine sync");
     return { ok: false, error: "HEARTHLINE_SPINE_SECRET not configured" };
   }
 
   const email = interview.candidate.email?.toLowerCase().trim();
-  if (!email) {
-    return { ok: false, error: "Candidate email missing" };
-  }
+  if (!email) return { ok: false, error: "Candidate email missing" };
 
   const sourceApplicationId = interview.rootId || interview.id;
   const payload = {
@@ -92,12 +87,6 @@ export async function syncApplicantToSpine(
       console.error("[spine-sync] sync failed", res.status, data);
       return { ok: false, error: data.error || `HTTP ${res.status}` };
     }
-    console.info(
-      "[spine-sync] synced",
-      email,
-      data.applicantId,
-      data.interviewId,
-    );
     return {
       ok: true,
       applicantId: data.applicantId,

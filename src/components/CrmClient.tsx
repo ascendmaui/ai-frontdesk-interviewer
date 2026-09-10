@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { AdminNav } from "@/components/AdminNav";
 import { AREA_CODE_REGIONS, INDUSTRY_TO_ROLE } from "@/lib/territories";
 
@@ -56,17 +56,11 @@ export function CrmClient() {
     states: "",
   });
 
-  useEffect(() => {
-    const s = sessionStorage.getItem("af_admin_secret");
-    if (s) setSecret(s);
-  }, []);
-
   const load = useCallback(async () => {
     if (!secret) return;
     setLoading(true);
     setError(null);
     try {
-      sessionStorage.setItem("af_admin_secret", secret);
       const [lRes, tRes] = await Promise.all([
         fetch("/api/leads", { headers: authHeaders(secret) }),
         fetch("/api/territories", { headers: authHeaders(secret) }),
@@ -159,7 +153,8 @@ export function CrmClient() {
         </h1>
         <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--ink-muted)]">
           Marketing leads route by phone area code (NPA) to closers who selected
-          matching codes — ideally the same area code as the phone they dial from.
+          matching codes — ideally the same area code as the phone they dial
+          from.
         </p>
       </div>
 
@@ -256,13 +251,18 @@ export function CrmClient() {
                   onChange={(e) => void setLeadStatus(lead.id, e.target.value)}
                   className="rounded-xl border border-[var(--line)] bg-white px-2 py-1.5 text-sm"
                 >
-                  {["new", "routed", "working", "won", "lost", "unassigned"].map(
-                    (s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ),
-                  )}
+                  {[
+                    "new",
+                    "routed",
+                    "working",
+                    "won",
+                    "lost",
+                    "unassigned",
+                  ].map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
                 </select>
               </div>
             </article>
@@ -272,7 +272,10 @@ export function CrmClient() {
 
       {tab === "territories" && (
         <section className="space-y-5">
-          <form onSubmit={(e) => void saveTerritory(e)} className="hl-card space-y-3 p-4">
+          <form
+            onSubmit={(e) => void saveTerritory(e)}
+            className="hl-card space-y-3 p-4"
+          >
             <h2 className="font-semibold text-[var(--ink)]">
               Add / update closer territory
             </h2>

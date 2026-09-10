@@ -100,7 +100,6 @@ export function shouldProvisionOnStatus(status: string): boolean {
   return status === "production_ready";
 }
 
-
 export function describeProvisionMode(trigger?: string): "auto" | "manual" | "unknown" {
   if (!trigger) return "unknown";
   if (trigger.startsWith("auto_")) return "auto";
