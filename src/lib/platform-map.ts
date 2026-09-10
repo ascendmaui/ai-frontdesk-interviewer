@@ -43,10 +43,10 @@ export const SYSTEMS: SystemNode[] = [
   },
   {
     id: "hearthline",
-    name: "Hearthline marketing site",
+    name: "Hearthline control plane",
     description:
-      "Customer-facing brand (hearthline). Funnel CTAs into industry paths.",
-    url: "https://hearthline-gold.vercel.app",
+      "Canonical CRM spine + product app (hearthline-platform). Gold URLs deprecated.",
+    url: "https://hearthline-platform.vercel.app",
     status: "live",
   },
   {
@@ -89,12 +89,12 @@ export const HIRING_FUNNEL = [
   {
     id: "train",
     label: "Industry academy · Coach (Rex)",
-    sub: ["Seat modules", "Quiz 80%", "Practice pitch 7/10"],
+    sub: ["Seat modules", "Knowledge >=85%", "Two roleplays >=8/10"],
   },
   {
     id: "ready",
     label: "Production ready",
-    sub: ["Territory active", "Receive leads"],
+    sub: ["Certification active", "Territory active", "Receive leads"],
   },
 ];
 
@@ -107,7 +107,7 @@ export const MARKETING_FUNNEL = [
 ];
 
 export const SALES_FUNNEL = [
-  { id: "s1", label: "Closer gets lead", sub: ["Territory NPA match"] },
+  { id: "s1", label: "Closer gets lead", sub: ["Certified + production-ready gate"] },
   { id: "s2", label: "Discovery call", sub: ["Script from academy"] },
   { id: "s3", label: "Demo / audit", sub: ["Hearthline packages"] },
   { id: "s4", label: "Close", sub: ["Next step in CRM"] },
@@ -118,7 +118,7 @@ export const FLOWS: FlowEdge[] = [
   { from: "hearthline", to: "marketing", label: "brand traffic" },
   { from: "marketing", to: "crm", label: "industry leads" },
   { from: "marketing", to: "interviewer", label: "closer applicants" },
-  { from: "interviewer", to: "crm", label: "hired closers" },
+  { from: "interviewer", to: "crm", label: "certified closers" },
   { from: "crm", to: "slack", label: "alerts" },
   { from: "interviewer", to: "slack", label: "hiring scorecards" },
 ];
