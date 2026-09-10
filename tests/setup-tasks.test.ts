@@ -11,13 +11,18 @@ test("closer setup includes required legal/compliance/payout/tax gates", () => {
     "sales-compliance",
     "payout-profile",
     "tax-form",
-    "slack",
     "handbook",
     "hearthline-os",
     "crm",
     "dialer",
   ]) {
     assert.equal(required.has(id), true, `${id} should be required`);
+  }
+  // Slack is optional unless ONBOARDING_SLACK_INVITE_URL is set
+  const slack = tasks.find((t) => t.id === "slack");
+  assert.ok(slack);
+  if (!process.env.ONBOARDING_SLACK_INVITE_URL) {
+    assert.equal(slack.required, false);
   }
 });
 

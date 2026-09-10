@@ -148,7 +148,13 @@ export async function ensureSlackChannels(): Promise<SlackSetupResult> {
 export async function postSlackChannel(
   channel: string,
   text: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+  if (process.env.NOTIFICATIONS_SLACK !== "true") {
+    console.info(
+      "[slack] postSlackChannel skipped (NOTIFICATIONS_SLACK is not true)",
+    );
+    return { ok: true, skipped: true };
+  }
   const bot = process.env.SLACK_BOT_TOKEN;
   if (!bot) {
     // Fall back to generic webhook
