@@ -20,33 +20,26 @@ export async function GET(
   const t = url.searchParams.get("t") || "";
 
   const interview = await getInterview(id);
-  if (!interview) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  if (!interview) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Always load root application
   const rootId = interview.rootId || interview.id;
   const root = (await getInterview(rootId)) || interview;
-
   const auth = portalAuthError(t, root.portalToken);
-  if (auth) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
+  if (auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const role = getRole(root.roleSlug);
   const progress = setupProgress(root.setupTasks);
-
   const osBase = (
     process.env.HEARTHLINE_OS_URL ||
     process.env.NEXT_PUBLIC_HEARTHLINE_OS_URL ||
-    "https://hearthline-gold.vercel.app"
+    "https://hearthline-platform.vercel.app"
   ).replace(/\/$/, "");
 
   const territories = await listTerritories().catch(() => []);
   const myTerritory = territories.find((x) => x.closerId === root.id) || null;
   const phoneNpa = extractAreaCode(root.candidate.phone || "");
+  const certification = certificationCheck(root);
 
-  // Candidate-safe: never expose scores / multitask / hire verdicts
   return NextResponse.json({
     id: root.id,
     portalToken: root.portalToken,
@@ -55,12 +48,16 @@ export async function GET(
     roleEmoji: role?.emoji,
     industry: role?.industry,
     pipelineStatus: root.pipelineStatus,
+    certification: {
+      certified: certification.certified,
+      reasons: certification.reasons,
+    },
     hearthlineOs: {
-      loginUrl: `${osBase}/os/login`,
-      jobKitUrl: `${osBase}/os/job-kit`,
-      dashboardUrl: `${osBase}/os`,
-      playbookUrl: `${osBase}/os/playbook`,
-      note: "Sign in with the same Google email you applied with. Your seat, leads, and job kit unlock after production ready.",
+      loginUrl: `${osBase}/app`,
+      jobKitUrl: `${osBase}/app`,
+      dashboardUrl: `${osBase}/app`,
+      playbookUrl: `${osBase}/app`,
+      note: "Sign in with the same Google email you applied with. Live lead access unlocks only after certification and production-ready status.",
     },
     steps: pipelineSteps(root.pipelineStatus),
     candidate: {
@@ -72,11 +69,7 @@ export async function GET(
     hmInterviewId: root.hmInterviewId,
     onboardingInterviewId: root.onboardingInterviewId,
     offer: root.offer
-      ? {
-          token: root.offer.token,
-          status: root.offer.status,
-          title: root.offer.title,
-        }
+      ? { token: root.offer.token, status: root.offer.status, title: root.offer.title }
       : null,
     setupTasks: root.setupTasks || [],
     setupProgress: progress,
@@ -87,11 +80,7 @@ export async function GET(
     },
     calendarUrl: COMPANY.calendarUrl || null,
     territory: myTerritory
-      ? {
-          areaCodes: myTerritory.areaCodes,
-          states: myTerritory.states,
-          active: myTerritory.active,
-        }
+      ? { areaCodes: myTerritory.areaCodes, states: myTerritory.states, active: myTerritory.active }
       : null,
     suggestedAreaCode: phoneNpa || null,
     areaCodeOptions: AREA_CODE_REGIONS.slice(0, 80),
@@ -126,15 +115,10 @@ export async function PATCH(
   }
 
   const root = await getInterview(id);
-  if (!root) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  if (!root) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const auth = portalAuthError(body.token, root.portalToken);
-  if (auth) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
+  if (auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  // Territory self-serve
   if (body.action === "save_territory") {
     const allowed = [
       "setup_in_progress",
@@ -145,25 +129,18 @@ export async function PATCH(
       "onboarding_complete",
     ].includes(root.pipelineStatus);
     if (!allowed) {
-      return NextResponse.json(
-        { error: "Territory unlocks after onboarding" },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: "Territory unlocks after onboarding" }, { status: 403 });
     }
+
     let areaCodes = Array.isArray(body.areaCodes)
       ? body.areaCodes
           .map((c) => String(c).replace(/\D/g, "").slice(0, 3))
           .filter((c) => c.length === 3)
       : [];
     const phoneNpa = extractAreaCode(root.candidate.phone || "");
-    if (phoneNpa && !areaCodes.includes(phoneNpa)) {
-      areaCodes = [phoneNpa, ...areaCodes];
-    }
+    if (phoneNpa && !areaCodes.includes(phoneNpa)) areaCodes = [phoneNpa, ...areaCodes];
     if (!areaCodes.length) {
-      return NextResponse.json(
-        { error: "Select at least one area code" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Select at least one area code" }, { status: 400 });
     }
     areaCodes = [...new Set(areaCodes)].slice(0, 12);
     const states = Array.isArray(body.states)
@@ -174,26 +151,20 @@ export async function PATCH(
       : [];
 
     try {
+      const certification = certificationCheck(root);
       const territory = await upsertTerritory({
         closerId: root.id,
-        closerName:
-          `${root.candidate.firstName} ${root.candidate.lastName}`.trim(),
+        closerName: `${root.candidate.firstName} ${root.candidate.lastName}`.trim(),
         email: root.candidate.email,
         phone: root.candidate.phone,
         roleSlug: root.roleSlug,
         areaCodes,
         states,
-        active:
-          certificationCheck(root).certified &&
-          root.pipelineStatus === "production_ready",
+        active: certification.certified && root.pipelineStatus === "production_ready",
       });
       return NextResponse.json({
         ok: true,
-        territory: {
-          areaCodes: territory.areaCodes,
-          states: territory.states,
-          active: territory.active,
-        },
+        territory: { areaCodes: territory.areaCodes, states: territory.states, active: territory.active },
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Save failed";
@@ -201,21 +172,14 @@ export async function PATCH(
     }
   }
 
-  if (!body.taskId) {
-    return NextResponse.json({ error: "taskId required" }, { status: 400 });
-  }
+  if (!body.taskId) return NextResponse.json({ error: "taskId required" }, { status: 400 });
 
   const tasks = [...(root.setupTasks || [])];
   const idx = tasks.findIndex((t) => t.id === body.taskId);
-  if (idx < 0) {
-    return NextResponse.json({ error: "Unknown task" }, { status: 404 });
-  }
+  if (idx < 0) return NextResponse.json({ error: "Unknown task" }, { status: 404 });
 
-  if (body.complete !== false) {
-    tasks[idx] = { ...tasks[idx], completedAt: new Date().toISOString() };
-  } else {
-    tasks[idx] = { ...tasks[idx], completedAt: undefined };
-  }
+  if (body.complete !== false) tasks[idx] = { ...tasks[idx], completedAt: new Date().toISOString() };
+  else tasks[idx] = { ...tasks[idx], completedAt: undefined };
 
   const progress = setupProgress(tasks);
   let pipelineStatus = root.pipelineStatus;
