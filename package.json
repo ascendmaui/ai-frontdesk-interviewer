@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --import tsx --test tests/*.test.ts",
-    "db:setup": "node --import tsx scripts/database.ts"
+    "db:setup": "node --import tsx scripts/database.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.3.4",

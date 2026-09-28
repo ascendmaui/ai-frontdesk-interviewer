@@ -9,7 +9,6 @@ Powered by **Grok Voice**. Designed like **Hearthline / Claude** (cream paper + 
 ## Quick start
 
 ```bash
-cd ~/ai-frontdesk-interviewer
 cp .env.local.example .env.local   # add XAI_API_KEY
 npm install
 npm run dev
