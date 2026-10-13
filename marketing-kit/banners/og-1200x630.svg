@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">AI Front Desk — Open Graph</title>
+  <desc id="desc">1200 by 630 share image with the product tagline and published package prices.</desc>
+  <defs>
+    <radialGradient id="wash" cx="40%" cy="0%" r="60%">
+      <stop offset="0" stop-color="#E1906B" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#E1906B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="side" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#BA5B33" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#BA5B33" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="0.32" cy="0.30" r="0.98">
+      <stop offset="0" stop-color="#E1906B"/>
+      <stop offset="0.7" stop-color="#BA5B33"/>
+      <stop offset="1" stop-color="#BA5B33"/>
+    </radialGradient>
+    <filter id="ms" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#BA5B33" flood-opacity="0.35"/>
+    </filter>
+    <filter id="card" x="-10%" y="-10%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#5A3C1E" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      @font-face { font-family: "Instrument Sans"; font-weight: 500; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Sans"; font-weight: 600; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-weight: 400; src: url("../fonts/InstrumentSerif-Regular-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; src: url("../fonts/InstrumentSerif-Italic-latin.woff2") format("woff2"); }
+      .sans { font-family: "Instrument Sans", "Helvetica Neue", sans-serif; }
+      .serif { font-family: "Instrument Serif", Georgia, serif; }
+    </style>
+  </defs>
+  <rect width="1200" height="630" fill="#FAF5EC"/>
+  <rect width="1200" height="420" fill="url(#wash)"/>
+  <circle cx="1120" cy="40" r="190" fill="url(#side)"/>
+  <g filter="url(#ms)">
+    <circle cx="96" cy="168" r="32" fill="url(#orb)"/>
+  </g>
+  <circle cx="96" cy="168" r="31.3" fill="none" stroke="rgba(255,255,255,0.35)"/>
+  <text class="sans" x="64" y="240" fill="#BA5B33" font-size="14" font-weight="600" letter-spacing="2.2">HEARTHLINE</text>
+  <text class="serif" x="64" y="328" fill="#231D15" font-size="76">AI Front Desk</text>
+  <text class="sans" x="64" y="386" fill="#6E6455" font-size="26">AI employees for </text>
+  <text class="serif" x="318" y="386" fill="#BA5B33" font-size="26" font-style="italic">local businesses</text>
+  <text class="sans" x="64" y="440" fill="#55493A" font-size="16">Three published packages. Setup and monthly</text>
+  <text class="sans" x="64" y="464" fill="#55493A" font-size="16">prices are listed with each one.</text>
+  <g filter="url(#card)">
+    <rect x="714" y="128" width="430" height="374" rx="22" fill="rgba(255,255,255,0.72)" stroke="rgba(255,255,255,0.85)"/>
+  </g>
+  <g class="serif" fill="#231D15" font-size="26">
+    <text x="742" y="196">AI Receptionist</text>
+    <text x="742" y="318">AI Front Office</text>
+    <text x="742" y="448">AI Growth Partner</text>
+  </g>
+  <text class="sans" x="742" y="344" fill="#BA5B33" font-size="11" font-weight="600" letter-spacing="1.6">FLAGSHIP</text>
+  <g class="sans" fill="#231D15" font-size="15" font-weight="600" text-anchor="end">
+    <text x="1116" y="188">$299/mo</text>
+    <text x="1116" y="308">$799/mo</text>
+    <text x="1116" y="440">$1,900/mo</text>
+  </g>
+  <g class="sans" fill="#6E6455" font-size="14" font-weight="500" text-anchor="end">
+    <text x="1116" y="210">Setup $499</text>
+    <text x="1116" y="330">Setup $999</text>
+    <text x="1116" y="462">Setup $2,500</text>
+  </g>
+  <line x1="742" y1="246" x2="1116" y2="246" stroke="rgba(35,29,21,0.1)"/>
+  <line x1="742" y1="378" x2="1116" y2="378" stroke="rgba(35,29,21,0.1)"/>
+</svg>

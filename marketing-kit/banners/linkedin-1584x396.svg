@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1584" height="396" viewBox="0 0 1584 396" role="img" aria-labelledby="title desc">
+  <title id="title">AI Front Desk — LinkedIn cover</title>
+  <desc id="desc">1584 by 396 cover. Product name, tagline, and three documented capabilities. Text sits right of the logo overlap.</desc>
+  <defs>
+    <radialGradient id="wash" cx="50%" cy="0%" r="60%">
+      <stop offset="0" stop-color="#E1906B" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#E1906B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="side" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#BA5B33" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#BA5B33" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="0.32" cy="0.30" r="0.98">
+      <stop offset="0" stop-color="#E1906B"/>
+      <stop offset="0.7" stop-color="#BA5B33"/>
+      <stop offset="1" stop-color="#BA5B33"/>
+    </radialGradient>
+    <filter id="ms" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#BA5B33" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      @font-face { font-family: "Instrument Sans"; font-weight: 500; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Sans"; font-weight: 600; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-weight: 400; src: url("../fonts/InstrumentSerif-Regular-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; src: url("../fonts/InstrumentSerif-Italic-latin.woff2") format("woff2"); }
+      .sans { font-family: "Instrument Sans", "Helvetica Neue", sans-serif; }
+      .serif { font-family: "Instrument Serif", Georgia, serif; }
+    </style>
+  </defs>
+  <rect width="1584" height="396" fill="#FAF5EC"/>
+  <rect width="1584" height="280" fill="url(#wash)"/>
+  <circle cx="1480" cy="20" r="170" fill="url(#side)"/>
+  <g filter="url(#ms)">
+    <circle cx="500" cy="188" r="39" fill="url(#orb)"/>
+  </g>
+  <circle cx="500" cy="188" r="38.2" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.3"/>
+  <text class="sans" x="560" y="150" fill="#BA5B33" font-size="13" font-weight="600" letter-spacing="2.1">HEARTHLINE</text>
+  <text class="serif" x="560" y="208" fill="#231D15" font-size="58">AI Front Desk</text>
+  <text class="sans" x="560" y="248" fill="#6E6455" font-size="20">AI employees for </text>
+  <text class="serif" x="752" y="248" fill="#BA5B33" font-size="20" font-style="italic">local businesses</text>
+  <g class="sans" fill="#55493A" font-size="16" font-weight="500">
+    <circle cx="1188" cy="150" r="3.5" fill="#BA5B33"/>
+    <text x="1202" y="156">24/7 voice</text>
+    <circle cx="1188" cy="188" r="3.5" fill="#BA5B33"/>
+    <text x="1202" y="194">Missed-call text-back</text>
+    <circle cx="1188" cy="226" r="3.5" fill="#BA5B33"/>
+    <text x="1202" y="232">Booking and follow-up</text>
+  </g>
+</svg>

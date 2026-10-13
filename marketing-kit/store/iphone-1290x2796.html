@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Front Desk — iPhone frame 430×932, export 1290×2796</title>
+    <link rel="stylesheet" href="../assets/base.css" />
+    <style>
+      #stage {
+        position: relative;
+        width: 430px;
+        height: 932px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .glow-side {
+        width: 220px;
+        height: 220px;
+        right: -70px;
+        top: 70px;
+      }
+      .status {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 54px;
+        padding: 16px 28px 0;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .status-icons {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .battery {
+        width: 25px;
+        height: 12px;
+        border: 1.5px solid var(--ink);
+        border-radius: 3px;
+        position: relative;
+      }
+      .battery::after {
+        content: "";
+        position: absolute;
+        right: -3px;
+        top: 3px;
+        width: 2px;
+        height: 4px;
+        border-radius: 0 1px 1px 0;
+        background: var(--ink);
+      }
+      .battery i {
+        display: block;
+        margin: 1.5px;
+        height: 6px;
+        width: 16px;
+        border-radius: 1px;
+        background: var(--ink);
+      }
+      header {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 16px;
+        padding: 10px 0 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .mark {
+        --mark: 30px;
+      }
+      .product {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 22px;
+        letter-spacing: 0.005em;
+        line-height: 1;
+      }
+      .product-sub {
+        margin: 2px 0 0;
+        font-size: 11px;
+        color: var(--ink-faint);
+      }
+      main {
+        position: relative;
+        z-index: 2;
+        padding: 20px 16px 0;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.55);
+        border-radius: var(--radius-pill);
+        padding: 6px 14px;
+        font-size: 13px;
+        color: var(--ink-muted);
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      h1 {
+        margin: 14px 0 0;
+        font-family: var(--font-serif);
+        font-size: 34px;
+        font-weight: 400;
+        letter-spacing: -0.015em;
+        line-height: 1.05;
+      }
+      h1 em {
+        font-style: italic;
+        color: var(--accent);
+      }
+      .lede {
+        margin: 12px 0 0;
+        font-size: 15.5px;
+        line-height: 1.45;
+        color: var(--ink-muted);
+      }
+      .card {
+        margin-top: 16px;
+        border-radius: var(--radius-card);
+        background: var(--bg-card);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        box-shadow: var(--shadow);
+        padding: 16px;
+      }
+      .card h2 {
+        margin: 4px 0 0;
+        font-family: var(--font-serif);
+        font-size: 26px;
+        font-weight: 400;
+        letter-spacing: -0.015em;
+      }
+      .price {
+        margin: 6px 0 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink-soft);
+      }
+      ul {
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      li {
+        position: relative;
+        padding-left: 14px;
+        margin-top: 6px;
+        font-size: 13.5px;
+        line-height: 1.35;
+        color: var(--ink-muted);
+      }
+      li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 6px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .mini {
+        border-radius: 18px;
+        background: var(--bg-card-solid);
+        border: 1px solid var(--line);
+        padding: 12px;
+      }
+      .mini h3 {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 16px;
+        font-weight: 400;
+        letter-spacing: -0.015em;
+        line-height: 1.15;
+      }
+      .mini p {
+        margin: 6px 0 0;
+        font-size: 12px;
+        line-height: 1.35;
+        color: var(--ink-muted);
+      }
+      .cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 16px;
+        min-height: 52px;
+        border-radius: var(--radius-pill);
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 12px 28px rgba(186, 91, 51, 0.28);
+      }
+      .industries {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 14px;
+      }
+      .industries span {
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.5);
+        padding: 4px 8px;
+        font-size: 11px;
+        color: var(--ink-soft);
+      }
+      .fine {
+        margin: 10px 0 0;
+        text-align: center;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--ink-faint);
+      }
+      .home {
+        position: absolute;
+        left: 50%;
+        bottom: 10px;
+        width: 134px;
+        height: 5px;
+        transform: translateX(-50%);
+        border-radius: 99px;
+        background: rgba(35, 29, 21, 0.28);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div class="glow-top"></div>
+      <div class="glow-side"></div>
+      <div class="status">
+        <span>9:41</span>
+        <span class="status-icons" aria-hidden="true">
+          <span class="battery"><i></i></span>
+        </span>
+      </div>
+      <header>
+        <span class="mark" aria-hidden="true"></span>
+        <div>
+          <p class="product">AI Front Desk</p>
+          <p class="product-sub">AI employees for local businesses</p>
+        </div>
+      </header>
+      <main>
+        <div class="pill"><span class="dot"></span> For local businesses</div>
+        <h1>Your whole front desk, <em>automated.</em></h1>
+        <p class="lede">
+          Phones, chat, follow-up, and reviews as one system.
+        </p>
+        <article class="card">
+          <p class="eyebrow">Flagship</p>
+          <h2>AI Front Office</h2>
+          <p class="price">Setup $999 · $799/mo</p>
+          <ul>
+            <li>24/7 voice, text-back, qualification, booking, summaries</li>
+            <li>Website chat and text + email follow-up</li>
+            <li>CRM and pipeline, review engine, monthly optimization</li>
+          </ul>
+        </article>
+        <div class="pair">
+          <article class="mini">
+            <h3>AI Receptionist</h3>
+            <p>Setup $499<br />$299/mo</p>
+          </article>
+          <article class="mini">
+            <h3>AI Growth Partner</h3>
+            <p>Setup $2,500<br />$1,900/mo</p>
+          </article>
+        </div>
+        <div class="industries">
+          <span>HVAC</span>
+          <span>Plumbing</span>
+          <span>Electrical</span>
+          <span>Med spa</span>
+          <span>Dental</span>
+          <span>Auto body</span>
+          <span>Auto service</span>
+          <span>Law</span>
+          <span>Roofing</span>
+          <span>Landscaping</span>
+          <span>Cleaning</span>
+          <span>Remodeling</span>
+          <span>Pest control</span>
+        </div>
+        <div class="cta">Request a demo</div>
+        <p class="fine">Matched to a closer by phone area code.</p>
+      </main>
+      <div class="home" aria-hidden="true"></div>
+    </div>
+  </body>
+</html>

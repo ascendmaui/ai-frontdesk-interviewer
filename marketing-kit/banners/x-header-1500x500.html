@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Front Desk — X header 1500×500</title>
+    <link rel="stylesheet" href="../assets/base.css" />
+    <style>
+      #stage {
+        position: relative;
+        width: 1500px;
+        height: 500px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .glow-side {
+        width: 420px;
+        height: 420px;
+        right: -40px;
+        top: -30px;
+      }
+      .safe {
+        position: absolute;
+        left: 500px;
+        right: 72px;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        gap: 28px;
+      }
+      .mark {
+        --mark: 92px;
+      }
+      .copy {
+        min-width: 0;
+      }
+      h1 {
+        margin: 8px 0 0;
+        font-family: var(--font-serif);
+        font-size: 78px;
+        font-weight: 400;
+        letter-spacing: 0.005em;
+        line-height: 0.95;
+        color: var(--ink);
+      }
+      .tag {
+        margin: 14px 0 0;
+        font-size: 26px;
+        line-height: 1.25;
+        color: var(--ink-muted);
+      }
+      .tag em {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-weight: 400;
+        color: var(--accent);
+      }
+      .pitch {
+        margin: 18px 0 0;
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--ink-soft);
+      }
+      .pitch strong {
+        font-weight: 600;
+        color: var(--accent);
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-right: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div class="glow-top"></div>
+      <div class="glow-side"></div>
+      <div class="safe">
+        <span class="mark" aria-hidden="true"></span>
+        <div class="copy">
+          <p class="eyebrow">Hearthline</p>
+          <h1>AI Front Desk</h1>
+          <p class="tag">AI employees for <em>local businesses</em></p>
+          <p class="pitch">
+            <strong>Receptionist</strong>Every call answered, every lead captured.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
