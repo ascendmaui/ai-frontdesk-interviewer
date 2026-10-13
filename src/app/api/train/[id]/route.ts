@@ -1,3 +1,4 @@
+import { withApiErrors } from "@/lib/api-errors";
 import { NextResponse } from "next/server";
 import {
   certificationCheck,
@@ -19,7 +20,7 @@ import type { InterviewRecord, TrainingState } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-export async function GET(
+async function handleGET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -70,7 +71,7 @@ export async function GET(
   });
 }
 
-export async function POST(
+async function handlePOST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -261,3 +262,7 @@ async function finalizeCertification(rootId: string): Promise<{
 
   return { root, certification, hearthlineProvision, territory };
 }
+
+export const GET = withApiErrors("GET /api/train/[id]", handleGET);
+
+export const POST = withApiErrors("POST /api/train/[id]", handlePOST);
