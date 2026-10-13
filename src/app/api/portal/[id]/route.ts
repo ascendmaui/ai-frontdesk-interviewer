@@ -1,3 +1,4 @@
+import { withApiErrors } from "@/lib/api-errors";
 import { NextResponse } from "next/server";
 import { certificationCheck } from "@/lib/certification";
 import { COMPANY } from "@/lib/company";
@@ -11,7 +12,7 @@ import { AREA_CODE_REGIONS, extractAreaCode } from "@/lib/territories";
 
 export const runtime = "nodejs";
 
-export async function GET(
+async function handleGET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -95,7 +96,7 @@ export async function GET(
   });
 }
 
-export async function PATCH(
+async function handlePATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -211,3 +212,7 @@ export async function PATCH(
     pipelineStatus: updated?.pipelineStatus,
   });
 }
+
+export const GET = withApiErrors("GET /api/portal/[id]", handleGET);
+
+export const PATCH = withApiErrors("PATCH /api/portal/[id]", handlePATCH);

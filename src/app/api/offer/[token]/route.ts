@@ -1,3 +1,4 @@
+import { withApiErrors } from "@/lib/api-errors";
 import { NextResponse } from "next/server";
 import { notifyStageComplete } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/pipeline";
@@ -13,7 +14,7 @@ import type { InterviewRecord } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-export async function GET(
+async function handleGET(
   _req: Request,
   ctx: { params: Promise<{ token: string }> },
 ) {
@@ -37,7 +38,7 @@ export async function GET(
   });
 }
 
-export async function POST(
+async function handlePOST(
   req: Request,
   ctx: { params: Promise<{ token: string }> },
 ) {
@@ -161,3 +162,7 @@ async function createOnboarding(
   await createInterview(record);
   return record;
 }
+
+export const GET = withApiErrors("GET /api/offer/[token]", handleGET);
+
+export const POST = withApiErrors("POST /api/offer/[token]", handlePOST);
