@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Front Desk — Open Graph 1200×630</title>
+    <link rel="stylesheet" href="../assets/base.css" />
+    <style>
+      #stage {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .glow-side {
+        width: 380px;
+        height: 380px;
+        right: -60px;
+        top: -40px;
+      }
+      .layout {
+        position: relative;
+        z-index: 1;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 430px;
+        gap: 36px;
+        align-items: center;
+        padding: 56px 56px 56px 64px;
+      }
+      .mark {
+        --mark: 64px;
+        margin-bottom: 22px;
+      }
+      h1 {
+        margin: 10px 0 0;
+        font-family: var(--font-serif);
+        font-size: 76px;
+        font-weight: 400;
+        letter-spacing: 0.005em;
+        line-height: 0.92;
+      }
+      .tag {
+        margin: 16px 0 0;
+        max-width: 460px;
+        font-size: 26px;
+        line-height: 1.25;
+        color: var(--ink-muted);
+      }
+      .tag em {
+        font-family: var(--font-serif);
+        font-style: italic;
+        color: var(--accent);
+      }
+      .note {
+        margin: 18px 0 0;
+        max-width: 440px;
+        font-size: 16px;
+        line-height: 1.45;
+        color: var(--ink-soft);
+      }
+      .card {
+        border-radius: var(--radius-card);
+        background: var(--bg-card);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        box-shadow: var(--shadow);
+        padding: 8px 22px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 16px;
+        align-items: baseline;
+        padding: 16px 0;
+      }
+      .row + .row {
+        border-top: 1px solid var(--line);
+      }
+      .name {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 26px;
+        letter-spacing: -0.015em;
+        line-height: 1.05;
+      }
+      .flag {
+        margin: 4px 0 0;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .price {
+        margin: 0;
+        text-align: right;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--ink);
+        line-height: 1.35;
+      }
+      .price span {
+        display: block;
+        font-weight: 500;
+        color: var(--ink-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div class="glow-top"></div>
+      <div class="glow-side"></div>
+      <div class="layout">
+        <div>
+          <span class="mark" aria-hidden="true"></span>
+          <p class="eyebrow">Hearthline</p>
+          <h1>AI Front Desk</h1>
+          <p class="tag">AI employees for <em>local businesses</em></p>
+          <p class="note">
+            Three published packages. Setup and monthly prices are listed
+            with each one.
+          </p>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div>
+              <p class="name">AI Receptionist</p>
+            </div>
+            <p class="price">$299/mo<span>Setup $499</span></p>
+          </div>
+          <div class="row">
+            <div>
+              <p class="name">AI Front Office</p>
+              <p class="flag">Flagship</p>
+            </div>
+            <p class="price">$799/mo<span>Setup $999</span></p>
+          </div>
+          <div class="row">
+            <div>
+              <p class="name">AI Growth Partner</p>
+            </div>
+            <p class="price">$1,900/mo<span>Setup $2,500</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

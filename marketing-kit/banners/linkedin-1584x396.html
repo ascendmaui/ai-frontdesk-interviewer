@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Front Desk — LinkedIn cover 1584×396</title>
+    <link rel="stylesheet" href="../assets/base.css" />
+    <style>
+      #stage {
+        position: relative;
+        width: 1584px;
+        height: 396px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .glow-side {
+        width: 340px;
+        height: 340px;
+        right: 20px;
+        top: -80px;
+      }
+      .safe {
+        position: absolute;
+        left: 460px;
+        right: 72px;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 32px;
+      }
+      .lockup {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+      }
+      .mark {
+        --mark: 78px;
+      }
+      h1 {
+        margin: 6px 0 0;
+        font-family: var(--font-serif);
+        font-size: 58px;
+        font-weight: 400;
+        letter-spacing: 0.005em;
+        line-height: 0.95;
+      }
+      .tag {
+        margin: 10px 0 0;
+        font-size: 20px;
+        color: var(--ink-muted);
+      }
+      .tag em {
+        font-family: var(--font-serif);
+        font-style: italic;
+        color: var(--accent);
+      }
+      .caps {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+        color: var(--ink-soft);
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .caps span::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        transform: translateY(-1px);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div class="glow-top"></div>
+      <div class="glow-side"></div>
+      <div class="safe">
+        <div class="lockup">
+          <span class="mark" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">Hearthline</p>
+            <h1>AI Front Desk</h1>
+            <p class="tag">AI employees for <em>local businesses</em></p>
+          </div>
+        </div>
+        <div class="caps">
+          <span>24/7 voice</span>
+          <span>Missed-call text-back</span>
+          <span>Booking and follow-up</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

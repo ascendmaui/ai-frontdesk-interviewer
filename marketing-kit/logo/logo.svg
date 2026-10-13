@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="168" viewBox="0 0 720 168" role="img" aria-labelledby="title desc">
+  <title id="title">AI Front Desk</title>
+  <desc id="desc">Logo lockup derived from the product header: terracotta radial circle and Instrument Serif wordmark.</desc>
+  <defs>
+    <radialGradient id="orb" cx="0.32" cy="0.30" r="0.98" fx="0.32" fy="0.30">
+      <stop offset="0" stop-color="#E1906B"/>
+      <stop offset="0.7" stop-color="#BA5B33"/>
+      <stop offset="1" stop-color="#BA5B33"/>
+    </radialGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="190%">
+      <feDropShadow dx="0" dy="13" stdDeviation="10" flood-color="#BA5B33" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      @font-face {
+        font-family: "Instrument Serif";
+        font-style: normal;
+        font-weight: 400;
+        src: url("../fonts/InstrumentSerif-Regular-latin.woff2") format("woff2");
+      }
+      .word { font-family: "Instrument Serif", Georgia, "Times New Roman", serif; }
+    </style>
+  </defs>
+  <g filter="url(#shadow)">
+    <circle cx="76" cy="78" r="48" fill="url(#orb)"/>
+  </g>
+  <circle cx="76" cy="78" r="47.2" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.6"/>
+  <text class="word" x="146" y="90" fill="#231D15" font-size="68" letter-spacing="0.34">AI Front Desk</text>
+</svg>

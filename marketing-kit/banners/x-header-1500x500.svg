@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500" role="img" aria-labelledby="title desc">
+  <title id="title">AI Front Desk — X header</title>
+  <desc id="desc">1500 by 500 header. Hearthline AI Front Desk, tagline, and the AI Receptionist pitch. Text sits right of the profile-photo overlap.</desc>
+  <defs>
+    <radialGradient id="wash" cx="50%" cy="0%" r="55%">
+      <stop offset="0" stop-color="#E1906B" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#E1906B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="side" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#BA5B33" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#BA5B33" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="0.32" cy="0.30" r="0.98">
+      <stop offset="0" stop-color="#E1906B"/>
+      <stop offset="0.7" stop-color="#BA5B33"/>
+      <stop offset="1" stop-color="#BA5B33"/>
+    </radialGradient>
+    <filter id="ms" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="12" stdDeviation="9" flood-color="#BA5B33" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      @font-face { font-family: "Instrument Sans"; font-weight: 500; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Sans"; font-weight: 600; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-weight: 400; src: url("../fonts/InstrumentSerif-Regular-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; src: url("../fonts/InstrumentSerif-Italic-latin.woff2") format("woff2"); }
+      .sans { font-family: "Instrument Sans", "Helvetica Neue", sans-serif; }
+      .serif { font-family: "Instrument Serif", Georgia, serif; }
+    </style>
+  </defs>
+  <rect width="1500" height="500" fill="#FAF5EC"/>
+  <rect width="1500" height="360" fill="url(#wash)"/>
+  <circle cx="1400" cy="40" r="210" fill="url(#side)"/>
+  <g filter="url(#ms)">
+    <circle cx="546" cy="230" r="46" fill="url(#orb)"/>
+  </g>
+  <circle cx="546" cy="230" r="45.2" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+  <text class="sans" x="620" y="168" fill="#BA5B33" font-size="15" font-weight="600" letter-spacing="2.4">HEARTHLINE</text>
+  <text class="serif" x="620" y="248" fill="#231D15" font-size="78">AI Front Desk</text>
+  <text class="sans" x="620" y="300" fill="#6E6455" font-size="26">AI employees for </text>
+  <text class="serif" x="868" y="300" fill="#BA5B33" font-size="26" font-style="italic">local businesses</text>
+  <text class="sans" x="620" y="348" fill="#BA5B33" font-size="13" font-weight="600" letter-spacing="1.8">RECEPTIONIST</text>
+  <text class="sans" x="748" y="348" fill="#55493A" font-size="16" font-weight="500">Every call answered, every lead captured.</text>
+</svg>

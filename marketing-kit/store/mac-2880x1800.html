@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Front Desk — Mac frame 1440×900, export 2880×1800</title>
+    <link rel="stylesheet" href="../assets/base.css" />
+    <style>
+      #stage {
+        position: relative;
+        width: 1440px;
+        height: 900px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .glow-side {
+        width: 460px;
+        height: 460px;
+        right: -80px;
+        top: -40px;
+      }
+      .titlebar {
+        position: relative;
+        z-index: 2;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 1px solid var(--line);
+        background: rgba(241, 234, 220, 0.72);
+      }
+      .lights {
+        position: absolute;
+        left: 20px;
+        display: flex;
+        gap: 8px;
+      }
+      .lights i {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: block;
+      }
+      .lights i:nth-child(1) { background: #ff5f57; }
+      .lights i:nth-child(2) { background: #febc2e; }
+      .lights i:nth-child(3) { background: #28c840; }
+      .titlebar strong {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-soft);
+      }
+      .layout {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 36px;
+        padding: 42px 48px 36px;
+        height: calc(100% - 52px);
+      }
+      .mark {
+        --mark: 48px;
+        margin-bottom: 18px;
+      }
+      h1 {
+        margin: 12px 0 0;
+        max-width: 560px;
+        font-family: var(--font-serif);
+        font-size: 64px;
+        font-weight: 400;
+        letter-spacing: -0.015em;
+        line-height: 0.98;
+      }
+      h1 em {
+        font-style: italic;
+        color: var(--accent);
+      }
+      .lede {
+        margin: 16px 0 0;
+        max-width: 480px;
+        font-size: 18px;
+        line-height: 1.45;
+        color: var(--ink-muted);
+      }
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 22px;
+        min-height: 52px;
+        padding: 0 22px;
+        border-radius: var(--radius-pill);
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 12px 28px rgba(186, 91, 51, 0.28);
+      }
+      .industries {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 28px;
+        max-width: 540px;
+      }
+      .industries span {
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.5);
+        padding: 6px 12px;
+        font-size: 13px;
+        color: var(--ink-soft);
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card {
+        border-radius: var(--radius-card);
+        background: var(--bg-card);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        box-shadow: var(--shadow);
+        padding: 16px 18px 14px;
+      }
+      .card header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: baseline;
+      }
+      .card h2 {
+        margin: 2px 0 0;
+        font-family: var(--font-serif);
+        font-size: 28px;
+        font-weight: 400;
+        letter-spacing: -0.015em;
+      }
+      .price {
+        margin: 0;
+        text-align: right;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      .price span {
+        display: block;
+        font-weight: 500;
+        color: var(--ink-muted);
+      }
+      .card p.body {
+        margin: 8px 0 0;
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--ink-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div class="glow-top"></div>
+      <div class="glow-side"></div>
+      <div class="titlebar">
+        <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+        <strong>AI Front Desk</strong>
+      </div>
+      <div class="layout">
+        <div>
+          <span class="mark" aria-hidden="true"></span>
+          <p class="eyebrow">Hearthline</p>
+          <h1>Your whole front desk, <em>automated.</em></h1>
+          <p class="lede">
+            AI employees for local businesses. Three published packages, from
+            a 24/7 voice receptionist to a front office and a growth plan.
+          </p>
+          <div class="cta">Request a demo</div>
+          <div class="industries">
+            <span>HVAC</span>
+            <span>Plumbing</span>
+            <span>Electrical</span>
+            <span>Med spa</span>
+            <span>Dental</span>
+            <span>Auto body</span>
+            <span>Auto service</span>
+            <span>Law</span>
+            <span>Roofing</span>
+            <span>Landscaping</span>
+            <span>Cleaning</span>
+            <span>Remodeling</span>
+            <span>Pest control</span>
+          </div>
+        </div>
+        <div class="stack">
+          <article class="card">
+            <header>
+              <div>
+                <p class="eyebrow">Voice</p>
+                <h2>AI Receptionist</h2>
+              </div>
+              <p class="price">$299/mo<span>Setup $499</span></p>
+            </header>
+            <p class="body">
+              24/7 AI voice agent, missed-call text-back, lead qualification,
+              appointment booking, and call summaries.
+            </p>
+          </article>
+          <article class="card">
+            <header>
+              <div>
+                <p class="eyebrow">Flagship</p>
+                <h2>AI Front Office</h2>
+              </div>
+              <p class="price">$799/mo<span>Setup $999</span></p>
+            </header>
+            <p class="body">
+              Everything in Receptionist, plus website chat, text and email
+              follow-up, CRM and pipeline, a review engine, and monthly
+              optimization.
+            </p>
+          </article>
+          <article class="card">
+            <header>
+              <div>
+                <p class="eyebrow">Growth</p>
+                <h2>AI Growth Partner</h2>
+              </div>
+              <p class="price">$1,900/mo<span>Setup $2,500</span></p>
+            </header>
+            <p class="body">
+              Everything in Front Office, plus an outbound sales agent, AI
+              search/ChatGPT ads, Meta ads, landing pages and creative, and a
+              dedicated strategist.
+            </p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

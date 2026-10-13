@@ -1,0 +1,156 @@
+/* Shared tokens for AI Front Desk marketing art.
+   Colors and type match src/app/globals.css and src/app/layout.tsx.
+   Latin subsets of Instrument Sans and Instrument Serif (SIL OFL). */
+
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../fonts/InstrumentSans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("../fonts/InstrumentSans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("../fonts/InstrumentSans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("../fonts/InstrumentSans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../fonts/InstrumentSerif-Regular-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url("../fonts/InstrumentSerif-Italic-latin.woff2") format("woff2");
+}
+
+:root {
+  --bg: #faf5ec;
+  --bg-deep: #f1eadc;
+  --bg-card: rgba(255, 255, 255, 0.62);
+  --bg-card-solid: #fffdf7;
+  --ink: #231d15;
+  --ink-soft: #55493a;
+  --ink-muted: #6e6455;
+  --ink-faint: #93876f;
+  --accent: #ba5b33;
+  --accent-hover: #9e4522;
+  --accent-soft: #e1906b;
+  --accent-wash: rgba(186, 91, 51, 0.1);
+  --accent-border: rgba(186, 91, 51, 0.25);
+  --line: rgba(35, 29, 21, 0.1);
+  --line-strong: rgba(35, 29, 21, 0.18);
+  --on-accent: #fff8f0;
+  --shadow: 0 10px 30px rgba(90, 60, 30, 0.08);
+  --shadow-lg: 0 22px 48px rgba(90, 60, 30, 0.13);
+  --radius-card: 22px;
+  --radius-pill: 99px;
+  --font-sans: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.mark {
+  display: block;
+  flex: 0 0 auto;
+  width: var(--mark, 30px);
+  height: var(--mark, 30px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #e1906b, #ba5b33 70%);
+  box-shadow:
+    inset 0 0 0 calc(var(--mark, 30px) / 30) rgba(255, 255, 255, 0.35),
+    0 calc(var(--mark, 30px) * 4 / 30) calc(var(--mark, 30px) * 12 / 30)
+      rgba(186, 91, 51, 0.35);
+}
+
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+}
+
+.wordmark {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.glow-top,
+.glow-side {
+  position: absolute;
+  pointer-events: none;
+}
+
+.glow-top {
+  inset: 0 0 auto 0;
+  height: 72%;
+  background: radial-gradient(
+    closest-side at 50% 0%,
+    rgba(225, 144, 107, 0.28),
+    transparent 72%
+  );
+}
+
+.glow-side {
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(186, 91, 51, 0.12),
+    transparent 70%
+  );
+}

@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2880" height="1800" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">AI Front Desk — Mac store frame</title>
+  <desc id="desc">Store screenshot template at 2880 by 1800. Mac window chrome around the published packages and industries. Not a capture of a shipped desktop app.</desc>
+  <defs>
+    <radialGradient id="wash" cx="45%" cy="0%" r="55%">
+      <stop offset="0" stop-color="#E1906B" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#E1906B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="side" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#BA5B33" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#BA5B33" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="0.32" cy="0.30" r="0.98">
+      <stop offset="0" stop-color="#E1906B"/>
+      <stop offset="0.7" stop-color="#BA5B33"/>
+      <stop offset="1" stop-color="#BA5B33"/>
+    </radialGradient>
+    <filter id="ms" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#BA5B33" flood-opacity="0.35"/>
+    </filter>
+    <filter id="card" x="-6%" y="-8%" width="116%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#5A3C1E" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      @font-face { font-family: "Instrument Sans"; font-weight: 500; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Sans"; font-weight: 600; src: url("../fonts/InstrumentSans-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-weight: 400; src: url("../fonts/InstrumentSerif-Regular-latin.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; src: url("../fonts/InstrumentSerif-Italic-latin.woff2") format("woff2"); }
+      .sans { font-family: "Instrument Sans", "Helvetica Neue", sans-serif; }
+      .serif { font-family: "Instrument Serif", Georgia, serif; }
+    </style>
+  </defs>
+  <rect width="1440" height="900" fill="#FAF5EC"/>
+  <rect width="1440" height="520" fill="url(#wash)"/>
+  <circle cx="1320" cy="40" r="230" fill="url(#side)"/>
+  <rect width="1440" height="52" fill="rgba(241,234,220,0.9)"/>
+  <line x1="0" y1="52" x2="1440" y2="52" stroke="rgba(35,29,21,0.1)"/>
+  <circle cx="26" cy="26" r="6" fill="#FF5F57"/>
+  <circle cx="46" cy="26" r="6" fill="#FEBC2E"/>
+  <circle cx="66" cy="26" r="6" fill="#28C840"/>
+  <text class="sans" x="720" y="31" fill="#55493A" font-size="13" font-weight="500" text-anchor="middle">AI Front Desk</text>
+  <g filter="url(#ms)">
+    <circle cx="72" cy="130" r="24" fill="url(#orb)"/>
+  </g>
+  <circle cx="72" cy="130" r="23.3" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="0.8"/>
+  <text class="sans" x="48" y="188" fill="#BA5B33" font-size="13" font-weight="600" letter-spacing="2">HEARTHLINE</text>
+  <text class="serif" x="48" y="258" fill="#231D15" font-size="60">Your whole front</text>
+  <text class="serif" x="48" y="324" fill="#231D15" font-size="60">desk, </text>
+  <text class="serif" x="230" y="324" fill="#BA5B33" font-size="60" font-style="italic">automated.</text>
+  <text class="sans" x="48" y="372" fill="#6E6455" font-size="18">AI employees for local businesses. Three published</text>
+  <text class="sans" x="48" y="396" fill="#6E6455" font-size="18">packages, from a voice receptionist to a growth plan.</text>
+  <rect x="48" y="424" width="196" height="52" rx="26" fill="#BA5B33"/>
+  <text class="sans" x="146" y="456" fill="#FFF8F0" font-size="16" font-weight="600" text-anchor="middle">Request a demo</text>
+  <g class="sans" fill="#55493A" font-size="13">
+    <rect x="48" y="508" width="72" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="64" y="528">HVAC</text>
+    <rect x="128" y="508" width="92" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="144" y="528">Plumbing</text>
+    <rect x="228" y="508" width="100" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="244" y="528">Electrical</text>
+    <rect x="336" y="508" width="88" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="352" y="528">Med spa</text>
+    <rect x="48" y="546" width="74" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="64" y="566">Dental</text>
+    <rect x="130" y="546" width="96" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="146" y="566">Auto body</text>
+    <rect x="234" y="546" width="112" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="250" y="566">Auto service</text>
+    <rect x="354" y="546" width="54" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="370" y="566">Law</text>
+    <rect x="48" y="584" width="86" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="64" y="604">Roofing</text>
+    <rect x="142" y="584" width="110" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="158" y="604">Landscaping</text>
+    <rect x="260" y="584" width="88" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="276" y="604">Cleaning</text>
+    <rect x="356" y="584" width="112" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="372" y="604">Remodeling</text>
+    <rect x="48" y="622" width="118" height="30" rx="15" fill="rgba(255,255,255,0.55)" stroke="rgba(35,29,21,0.1)"/>
+    <text x="64" y="642">Pest control</text>
+  </g>
+  <g filter="url(#card)">
+    <rect x="760" y="96" width="632" height="168" rx="22" fill="rgba(255,255,255,0.75)" stroke="rgba(255,255,255,0.9)"/>
+    <rect x="760" y="280" width="632" height="176" rx="22" fill="rgba(255,255,255,0.75)" stroke="rgba(255,255,255,0.9)"/>
+    <rect x="760" y="472" width="632" height="196" rx="22" fill="rgba(255,255,255,0.75)" stroke="rgba(255,255,255,0.9)"/>
+  </g>
+  <g class="sans" font-size="12" font-weight="600" letter-spacing="1.6" fill="#BA5B33">
+    <text x="782" y="126">VOICE</text>
+    <text x="782" y="310">FLAGSHIP</text>
+    <text x="782" y="502">GROWTH</text>
+  </g>
+  <g class="serif" font-size="28" fill="#231D15">
+    <text x="782" y="160">AI Receptionist</text>
+    <text x="782" y="346">AI Front Office</text>
+    <text x="782" y="538">AI Growth Partner</text>
+  </g>
+  <g class="sans" font-size="14" font-weight="600" fill="#231D15" text-anchor="end">
+    <text x="1368" y="148">$299/mo</text>
+    <text x="1368" y="332">$799/mo</text>
+    <text x="1368" y="524">$1,900/mo</text>
+  </g>
+  <g class="sans" font-size="13" font-weight="500" fill="#6E6455" text-anchor="end">
+    <text x="1368" y="168">Setup $499</text>
+    <text x="1368" y="352">Setup $999</text>
+    <text x="1368" y="544">Setup $2,500</text>
+  </g>
+  <g class="sans" font-size="14" fill="#6E6455">
+    <text x="782" y="198">24/7 AI voice agent, missed-call text-back, lead</text>
+    <text x="782" y="218">qualification, appointment booking, and call summaries.</text>
+    <text x="782" y="386">Everything in Receptionist, plus website chat, text and</text>
+    <text x="782" y="406">email follow-up, CRM and pipeline, a review engine, and</text>
+    <text x="782" y="426">monthly optimization.</text>
+    <text x="782" y="578">Everything in Front Office, plus an outbound sales agent,</text>
+    <text x="782" y="598">AI search/ChatGPT ads, Meta ads, landing pages and</text>
+    <text x="782" y="618">creative, and a dedicated strategist.</text>
+  </g>
+</svg>

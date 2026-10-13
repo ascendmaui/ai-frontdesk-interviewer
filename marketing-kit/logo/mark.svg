@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">AI Front Desk mark</title>
+  <desc id="desc">Terracotta radial circle used as the AI Front Desk header mark.</desc>
+  <defs>
+    <radialGradient id="orb" cx="0.32" cy="0.30" r="0.98" fx="0.32" fy="0.30">
+      <stop offset="0" stop-color="#E1906B"/>
+      <stop offset="0.7" stop-color="#BA5B33"/>
+      <stop offset="1" stop-color="#BA5B33"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="170%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="12" flood-color="#BA5B33" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <circle cx="128" cy="120" r="74" fill="url(#orb)"/>
+  </g>
+  <circle cx="128" cy="120" r="72.5" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2.5"/>
+</svg>
