@@ -1,3 +1,4 @@
+import { withApiErrors } from "@/lib/api-errors";
 import { NextResponse } from "next/server";
 import { certificationCheck } from "@/lib/certification";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
 type CoachMode = "coach" | "call_prep" | "debrief";
 type CoachMessage = { role: "user" | "assistant"; text: string };
 
-export async function POST(
+async function handlePOST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -241,3 +242,5 @@ function safeApiError(data: unknown): string {
     return d.error.message.slice(0, 300);
   return "provider error";
 }
+
+export const POST = withApiErrors("POST /api/coach/[id]", handlePOST);

@@ -1,3 +1,4 @@
+import { withApiErrors } from "@/lib/api-errors";
 import { NextResponse } from "next/server";
 import { voiceForKind } from "@/lib/agent-voices";
 import { getRole } from "@/lib/roles";
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
  * Public candidate-facing interview status.
  * Omits scores/transcripts; includes agent identity for correct UI.
  */
-export async function GET(
+async function handleGET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -58,3 +59,5 @@ export async function GET(
     },
   });
 }
+
+export const GET = withApiErrors("GET /api/interview/[id]", handleGET);
